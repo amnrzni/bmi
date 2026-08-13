@@ -1,0 +1,97 @@
+/*
+ | Design tokens lifted verbatim from bmi-challenge-mockup.html.
+ |
+ | Fonts are self-hosted rather than pulled from the Google Fonts CDN: this app
+ | may end up on an intranet, and a blocked CDN would wreck the whole
+ | typographic identity, which is doing most of the work in this design.
+ */
+@import '@fontsource/oswald/500.css';
+@import '@fontsource/oswald/600.css';
+@import '@fontsource/oswald/700.css';
+@import '@fontsource/barlow-condensed/400.css';
+@import '@fontsource/barlow-condensed/500.css';
+@import '@fontsource/barlow-condensed/600.css';
+@import '@fontsource/barlow/400.css';
+@import '@fontsource/barlow/500.css';
+
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../views/**/*.blade.php';
+@source '../../app/**/*.php';
+
+@theme {
+    /* Palette — same hex values as the mock's :root block. */
+    --color-ink: #0a0a0b; /* near-black page background */
+    --color-ink-2: #141215; /* raised panels */
+    --color-ink-3: #1d1a1e; /* borders */
+    --color-bone: #eae4d8; /* primary text */
+    --color-bone-dim: #9a938a; /* muted text */
+    --color-gold: #c9a24b; /* accent; also "down" / weight lost */
+    --color-gold-bright: #e5c877;
+    --color-blood: #b11226; /* danger; primary button */
+    --color-blood-bright: #d21b30; /* "up" / weight gained */
+
+    --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
+    --font-cond: 'Barlow Condensed', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-ink);
+        color: var(--color-bone);
+        font-family: var(--font-sans);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Faint smoke/grain atmosphere behind everything. */
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+            radial-gradient(120% 80% at 50% -10%, rgb(201 162 75 / 0.1), transparent 60%),
+            radial-gradient(90% 60% at 90% 110%, rgb(177 18 38 / 0.1), transparent 55%);
+    }
+
+    /* Kill the spinner on weight/height number inputs — it fights the type. */
+    input[type='number']::-webkit-outer-spin-button,
+    input[type='number']::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type='number'] {
+        -moz-appearance: textfield;
+    }
+}
+
+/*
+ | The skewed gold brushstroke that precedes every section heading in the mock.
+ | A pseudo-element is genuinely simpler here than a wrapper span.
+ */
+@utility brushstroke {
+    &::before {
+        content: '';
+        width: 34px;
+        height: 4px;
+        flex: none;
+        background: var(--color-gold);
+        transform: skewX(-20deg);
+    }
+}
+
+/* Tracking values the mock uses that sit outside Tailwind's default scale. */
+@utility tracking-eyebrow {
+    letter-spacing: 0.42em;
+}
+@utility tracking-label {
+    letter-spacing: 0.14em;
+}
+@utility tracking-wide-cond {
+    letter-spacing: 0.1em;
+}

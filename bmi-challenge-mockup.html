@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team TAH — BMI Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Barlow+Condensed:wght@400;500;600&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0a0b;        /* near-black bg */
+    --ink-2:#141215;      /* raised panels */
+    --ink-3:#1d1a1e;      /* borders */
+    --bone:#eae4d8;       /* bone-white */
+    --bone-dim:#9a938a;   /* muted text */
+    --gold:#c9a24b;       /* distressed gold */
+    --gold-bright:#e5c877;
+    --blood:#b11226;      /* blood red */
+    --blood-bright:#d21b30;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--ink);
+    color:var(--bone);
+    font-family:'Barlow',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  /* faint smoke/grain atmosphere */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgba(201,162,75,.10), transparent 60%),
+      radial-gradient(90% 60% at 90% 110%, rgba(177,18,38,.10), transparent 55%);
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px;position:relative;z-index:1}
+
+  /* ---- top nav / tabs ---- */
+  nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px;border-bottom:1px solid var(--ink-3);
+    position:relative;z-index:2;
+  }
+  .brand{font-family:'Oswald';font-weight:700;letter-spacing:.14em;font-size:15px;text-transform:uppercase}
+  .brand b{color:var(--gold)}
+  .tabs{display:flex;gap:6px}
+  .tab{
+    font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.1em;
+    font-size:13px;font-weight:600;color:var(--bone-dim);
+    background:none;border:1px solid transparent;padding:8px 16px;cursor:pointer;border-radius:2px;
+    transition:.15s;
+  }
+  .tab:hover{color:var(--bone)}
+  .tab.active{color:var(--ink);background:var(--gold);border-color:var(--gold)}
+
+  .screen{display:none}
+  .screen.on{display:block}
+
+  /* ================= LANDING ================= */
+  .hero{
+    text-align:center;padding:70px 20px 50px;position:relative;
+    border-bottom:1px solid var(--ink-3);
+  }
+  .eyebrow{
+    font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.42em;
+    font-size:12px;color:var(--gold);margin-bottom:18px;
+  }
+  .hero h1{
+    font-family:'Oswald';font-weight:700;text-transform:uppercase;
+    font-size:clamp(52px,11vw,110px);line-height:.86;letter-spacing:.01em;
+  }
+  .hero h1 .red{color:var(--blood);
+    text-shadow:0 0 30px rgba(177,18,38,.35);
+    -webkit-text-stroke:1px rgba(255,255,255,.04);
+  }
+  .hero h1 .bone{color:var(--bone)}
+  .tagline{
+    font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.3em;
+    font-size:14px;color:var(--bone-dim);margin-top:22px;
+  }
+  .tagline b{color:var(--gold-bright)}
+
+  /* team standings */
+  .standings{
+    display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:stretch;
+    margin:44px 0;border:1px solid var(--ink-3);background:var(--ink-2);
+  }
+  .team{padding:30px 26px;text-align:center;position:relative}
+  .team .label{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.2em;font-size:13px;color:var(--bone-dim)}
+  .team .name{font-family:'Oswald';font-weight:700;text-transform:uppercase;font-size:34px;letter-spacing:.04em;margin:4px 0 14px}
+  .team.tah .name{color:var(--gold)}
+  .team.opp .name{color:var(--bone)}
+  .team .metric{font-family:'Oswald';font-weight:600;font-size:44px;line-height:1}
+  .team .metric.down{color:var(--blood-bright,#e2384a)}
+  .team .metric small{font-size:16px;color:var(--bone-dim);font-weight:500}
+  .team .sub{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--bone-dim);margin-top:8px}
+  .vs{
+    display:flex;align-items:center;justify-content:center;padding:0 4px;
+    font-family:'Oswald';font-weight:700;font-size:22px;color:var(--blood);
+    background:var(--ink);border-left:1px solid var(--ink-3);border-right:1px solid var(--ink-3);
+  }
+  .lead-flag{
+    position:absolute;top:0;left:50%;transform:translate(-50%,-50%);
+    font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.18em;
+    font-size:10px;font-weight:600;color:var(--ink);background:var(--gold);
+    padding:3px 12px;border-radius:2px;white-space:nowrap;
+  }
+
+  /* weigh-in status callout */
+  .callout{
+    display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;
+    border:1px solid var(--gold);background:linear-gradient(180deg,rgba(201,162,75,.08),transparent);
+    padding:22px 26px;margin-bottom:22px;
+  }
+  .callout .txt .k{font-family:'Oswald';font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:20px}
+  .callout .txt .d{font-family:'Barlow Condensed';letter-spacing:.06em;color:var(--bone-dim);font-size:15px;text-transform:uppercase}
+  .btn{
+    font-family:'Oswald';font-weight:600;text-transform:uppercase;letter-spacing:.12em;font-size:15px;
+    background:var(--blood);color:var(--bone);border:none;padding:14px 28px;cursor:pointer;border-radius:2px;
+    transition:.15s;white-space:nowrap;
+  }
+  .btn:hover{background:var(--blood-bright,#d21b30);transform:translateY(-1px)}
+  .btn.gold{background:var(--gold);color:var(--ink)}
+  .btn.gold:hover{background:var(--gold-bright)}
+
+  /* section header brushstroke */
+  .sec-head{
+    font-family:'Oswald';font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    font-size:24px;margin:40px 0 18px;display:flex;align-items:center;gap:14px;
+  }
+  .sec-head::before{content:"";width:34px;height:4px;background:var(--gold);transform:skewX(-20deg)}
+
+  /* events strip */
+  .events{display:grid;gap:12px;margin-bottom:20px}
+  .event{
+    display:grid;grid-template-columns:64px 1fr auto;gap:18px;align-items:center;
+    border:1px solid var(--ink-3);background:var(--ink-2);padding:16px 20px;
+  }
+  .event .date{text-align:center;border-right:1px solid var(--ink-3);padding-right:12px}
+  .event .date .d{font-family:'Oswald';font-weight:700;font-size:26px;line-height:1;color:var(--gold)}
+  .event .date .m{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--bone-dim)}
+  .event .info .t{font-family:'Oswald';font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:17px}
+  .event .info .meta{font-family:'Barlow Condensed';letter-spacing:.06em;color:var(--bone-dim);font-size:14px;text-transform:uppercase}
+  .rsvp{
+    font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.1em;font-size:12px;font-weight:600;
+    border:1px solid var(--gold);color:var(--gold);background:none;padding:8px 16px;cursor:pointer;border-radius:2px;transition:.15s;
+  }
+  .rsvp:hover{background:var(--gold);color:var(--ink)}
+  .rsvp.done{border-color:var(--ink-3);color:var(--bone-dim);cursor:default}
+  .rsvp.done:hover{background:none;color:var(--bone-dim)}
+
+  /* ================= WEEKLY INPUT ================= */
+  .weigh{max-width:520px;margin:0 auto;padding:56px 20px 70px}
+  .weigh.wide{max-width:640px}
+  .weigh .eyebrow{text-align:center}
+  .weigh h2{
+    font-family:'Oswald';font-weight:700;text-transform:uppercase;text-align:center;
+    font-size:clamp(40px,9vw,64px);line-height:.9;margin-bottom:6px;
+  }
+  .weigh h2 .red{color:var(--blood)}
+  .weigh .week-of{
+    text-align:center;font-family:'Barlow Condensed';text-transform:uppercase;
+    letter-spacing:.22em;font-size:13px;color:var(--bone-dim);margin-bottom:38px;
+  }
+  .card{background:var(--ink-2);border:1px solid var(--ink-3);padding:32px 28px}
+  .field{margin-bottom:26px}
+  .field label{
+    display:block;font-family:'Barlow Condensed';text-transform:uppercase;
+    letter-spacing:.14em;font-size:13px;color:var(--bone-dim);margin-bottom:10px;
+  }
+  .weight-in{display:flex;align-items:baseline;border-bottom:2px solid var(--ink-3);transition:.2s}
+  .weight-in:focus-within{border-color:var(--gold)}
+  .weight-in input{
+    flex:1;background:none;border:none;color:var(--bone);outline:none;
+    font-family:'Oswald';font-weight:700;font-size:60px;width:100%;
+  }
+  .weight-in input::placeholder{color:var(--ink-3)}
+  .weight-in .unit{font-family:'Oswald';font-weight:600;font-size:22px;color:var(--bone-dim);padding-left:10px}
+  .locked-height{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--ink);border:1px solid var(--ink-3);padding:12px 16px;
+  }
+  .locked-height .v{font-family:'Oswald';font-weight:600;font-size:18px}
+  .locked-height .tag{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.1em;font-size:11px;color:var(--bone-dim)}
+
+  /* live BMI verdict */
+  .verdict{
+    text-align:center;border:1px solid var(--ink-3);background:var(--ink);
+    padding:24px;margin:26px 0;position:relative;overflow:hidden;
+  }
+  .verdict .vl{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.24em;font-size:12px;color:var(--bone-dim)}
+  .verdict .vnum{font-family:'Oswald';font-weight:700;font-size:64px;line-height:1;margin:6px 0;color:var(--gold)}
+  .verdict .vnum.pending{color:var(--ink-3)}
+  .verdict .vcat{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.16em;font-size:13px;color:var(--bone-dim)}
+  .verdict .vcat b{color:var(--bone)}
+
+  .upload{
+    display:flex;align-items:center;gap:14px;border:1px dashed var(--ink-3);
+    padding:16px;cursor:pointer;transition:.15s;
+  }
+  .upload:hover{border-color:var(--gold);background:rgba(201,162,75,.04)}
+  .upload .ic{font-family:'Oswald';font-size:22px;color:var(--gold)}
+  .upload .u{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--bone-dim)}
+  .upload .u b{color:var(--bone);display:block}
+
+  .submit{width:100%;margin-top:28px;padding:18px}
+  .fine{text-align:center;font-family:'Barlow Condensed';letter-spacing:.08em;text-transform:uppercase;font-size:12px;color:var(--bone-dim);margin-top:16px}
+
+  /* PIC: department picker */
+  .pick-label{display:block;font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.14em;font-size:13px;color:var(--bone-dim);margin-bottom:14px;text-align:center}
+  .dept-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .dept{
+    text-align:left;background:var(--ink-2);border:1px solid var(--ink-3);
+    padding:20px 22px;cursor:pointer;transition:.15s;
+  }
+  .dept:hover{border-color:var(--gold);transform:translateY(-2px)}
+  .dept .dn{font-family:'Oswald';font-weight:600;text-transform:uppercase;letter-spacing:.03em;font-size:18px;color:var(--bone)}
+  .dept .ds{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--bone-dim);margin-top:6px}
+  .dept .ds.done{color:var(--gold)}
+  .dept .ds.pending{color:var(--blood-bright)}
+
+  /* PIC: roster */
+  .back{background:none;border:none;color:var(--gold);font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.1em;font-size:13px;cursor:pointer;padding:0;margin-bottom:20px}
+  .back:hover{color:var(--gold-bright)}
+  .roster-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--ink-3);padding-bottom:14px;margin-bottom:6px}
+  .roster-head .rh-name{font-family:'Oswald';font-weight:700;text-transform:uppercase;font-size:26px;color:var(--bone)}
+  .roster-head .rh-prog{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.12em;font-size:13px;color:var(--gold)}
+  .rrow{
+    display:grid;grid-template-columns:1fr 132px 70px;gap:14px;align-items:center;
+    padding:14px 4px;border-bottom:1px solid var(--ink-3);
+  }
+  .rrow .rn{font-family:'Barlow Condensed';font-size:17px;letter-spacing:.02em;color:var(--bone)}
+  .rrow .rn small{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--bone-dim)}
+  .rrow .rin{display:flex;align-items:baseline;border:1px solid var(--ink-3);background:var(--ink);padding:8px 10px;transition:.15s}
+  .rrow .rin:focus-within{border-color:var(--gold)}
+  .rrow .rin input{width:100%;background:none;border:none;outline:none;color:var(--bone);font-family:'Oswald';font-weight:600;font-size:22px}
+  .rrow .rin input::placeholder{color:var(--ink-3)}
+  .rrow .rin .u{font-family:'Barlow Condensed';font-size:12px;color:var(--bone-dim);padding-left:6px}
+  .rrow .rbmi{text-align:center;font-family:'Oswald';font-weight:600;font-size:20px;color:var(--gold)}
+  .rrow .rbmi.empty{color:var(--ink-3)}
+  .rrow.filled{background:rgba(201,162,75,.04)}
+
+  /* ADMIN panel */
+  .admin-wrap{max-width:760px;margin:0 auto;padding:56px 20px 70px}
+  .admin-title{font-family:'Oswald';font-weight:700;text-transform:uppercase;text-align:center;font-size:clamp(36px,8vw,58px);line-height:.9;margin-bottom:34px}
+  .admin-title .red{color:var(--blood)}
+  .balance{display:grid;grid-template-columns:1fr 2fr 1fr;gap:0;align-items:center;border:1px solid var(--ink-3);background:var(--ink-2)}
+  .bteam{text-align:center;padding:20px 16px}
+  .bteam .bt-name{font-family:'Oswald';font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:18px;color:var(--gold)}
+  .bteam .bt-count{font-family:'Oswald';font-weight:700;font-size:40px;line-height:1;margin:2px 0}
+  .bteam .bt-sub{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--bone-dim)}
+  .bteam .bt-sub b{color:var(--bone)}
+  .bbar{padding:0 18px;position:relative}
+  .bbar-fill{height:8px;background:var(--gold);border-radius:4px;width:50%;transition:width .3s,background .3s}
+  .bbar-label{text-align:center;font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--bone-dim);margin-top:8px}
+  .bal-note{text-align:center;font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:var(--bone-dim);margin:14px 0 30px}
+
+  .adept{border:1px solid var(--ink-3);margin-bottom:12px;background:var(--ink-2)}
+  .adept-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;cursor:pointer;user-select:none}
+  .adept-head:hover{background:var(--ink-3)}
+  .adept-head .an{font-family:'Oswald';font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-size:17px}
+  .adept-head .am{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.1em;font-size:12px;color:var(--bone-dim)}
+  .adept-head .chev{color:var(--gold);transition:transform .2s;font-family:'Oswald'}
+  .adept.open .chev{transform:rotate(90deg)}
+  .adept-body{display:none;border-top:1px solid var(--ink-3)}
+  .adept.open .adept-body{display:block}
+  .arow{display:grid;grid-template-columns:1fr 90px 120px;gap:12px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--ink-3)}
+  .arow:last-child{border-bottom:none}
+  .arow .aname{font-family:'Barlow Condensed';font-size:16px;color:var(--bone)}
+  .arow .aheight{display:flex;align-items:baseline;border:1px solid var(--ink-3);background:var(--ink);padding:6px 8px}
+  .arow .aheight input{width:100%;background:none;border:none;outline:none;color:var(--bone);font-family:'Oswald';font-weight:600;font-size:15px}
+  .arow .aheight .u{font-family:'Barlow Condensed';font-size:11px;color:var(--bone-dim);padding-left:4px}
+  .teamtog{display:flex;border:1px solid var(--ink-3);overflow:hidden}
+  .teamtog button{flex:1;background:var(--ink);border:none;color:var(--bone-dim);font-family:'Oswald';font-weight:600;font-size:14px;padding:7px 0;cursor:pointer;transition:.12s}
+  .teamtog button.on{background:var(--gold);color:var(--ink)}
+  .teamtog button:hover:not(.on){color:var(--bone)}
+
+  /* ANALYTICS */
+  .ana-wrap{max-width:900px;margin:0 auto;padding:56px 20px 70px}
+  .ana-controls{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:22px 0 16px}
+  .ana-filter{display:flex;gap:6px}
+  .af{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.1em;font-size:12px;font-weight:600;color:var(--bone-dim);background:var(--ink-2);border:1px solid var(--ink-3);padding:8px 18px;cursor:pointer;transition:.12s}
+  .af:hover{color:var(--bone)}
+  .af.on{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+  .ana-week{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--bone-dim)}
+  .ana-scroll{overflow-x:auto;border:1px solid var(--ink-3)}
+  .ana-table{width:100%;border-collapse:collapse;min-width:680px}
+  .ana-table th{
+    font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.08em;font-size:12px;
+    color:var(--bone-dim);font-weight:600;text-align:center;padding:14px 10px;
+    background:var(--ink-2);border-bottom:1px solid var(--ink-3);vertical-align:bottom;
+  }
+  .ana-table th small{font-weight:400;font-size:10px;letter-spacing:.04em;text-transform:none}
+  .ana-table th.lft{text-align:left}
+  .ana-table td{padding:12px 10px;text-align:center;border-bottom:1px solid var(--ink-3);font-family:'Oswald';font-weight:500;font-size:15px}
+  .ana-table tr:last-child td{border-bottom:none}
+  .ana-table tr:hover td{background:rgba(201,162,75,.04)}
+  .ana-table td.name{text-align:left;font-family:'Barlow Condensed';font-size:16px;color:var(--bone)}
+  .ana-table td.dept{font-family:'Barlow Condensed';font-size:13px;color:var(--bone-dim);letter-spacing:.04em}
+  .tpill{font-family:'Barlow Condensed';font-weight:600;font-size:12px;letter-spacing:.08em;padding:3px 10px;border-radius:2px}
+  .tpill.A{background:rgba(201,162,75,.18);color:var(--gold-bright)}
+  .tpill.B{background:rgba(234,228,216,.1);color:var(--bone)}
+  .down{color:var(--gold)}
+  .up{color:#e2384a}
+  .flat{color:var(--bone-dim)}
+
+  .tbl-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .tbl-title{font-family:'Oswald';font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:20px;display:flex;align-items:center;gap:12px}
+  .tbl-title::before{content:"";width:28px;height:4px;background:var(--gold);transform:skewX(-20deg)}
+  .metric-tog{display:flex;gap:4px}
+  .mt{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.08em;font-size:12px;font-weight:600;color:var(--bone-dim);background:var(--ink-2);border:1px solid var(--ink-3);padding:7px 16px;cursor:pointer;transition:.12s}
+  .mt:hover{color:var(--bone)}
+  .mt.on{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+  .grid-table td.wk{font-size:14px;color:var(--bone)}
+  .grid-table td.miss{color:var(--ink-3)}
+  .grid-table th.wk-h{font-size:11px}
+  /* sticky first column so name stays visible when scrolling weeks */
+  .grid-table th.lft, .grid-table td.name{position:sticky;left:0;background:var(--ink);z-index:1}
+  .grid-table thead th.lft{background:var(--ink-2);z-index:2}
+
+  footer{border-top:1px solid var(--ink-3);text-align:center;padding:28px 20px;margin-top:40px}
+  footer .roster{font-family:'Barlow Condensed';text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--bone-dim)}
+  footer .roster b{color:var(--gold)}
+
+  @media(max-width:600px){
+    .standings{grid-template-columns:1fr}
+    .vs{border:none;border-top:1px solid var(--ink-3);border-bottom:1px solid var(--ink-3);padding:8px}
+    .event{grid-template-columns:56px 1fr;gap:14px}
+    .event .rsvp{grid-column:2;justify-self:start;margin-top:4px}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">TEAM <b>TAH</b> · Kapla Home Council</div>
+  <div class="tabs">
+    <button class="tab active" onclick="show('landing',this)">Markas</button>
+    <button class="tab" onclick="show('weigh',this)">Sesi Timbang</button>
+    <button class="tab" onclick="show('admin',this)">Admin</button>
+    <button class="tab" onclick="show('analytics',this)">Analitik</button>
+  </div>
+</nav>
+
+<!-- ================= LANDING ================= -->
+<section class="screen on" id="landing">
+  <div class="hero">
+    <div class="eyebrow">Ogos — November 2026 · Sesi Timbang Hari Isnin</div>
+    <h1><span class="bone">NEW WEEK,</span><br><span class="red">NEW WEIGHT</span></h1>
+    <div class="tagline">Disiplin · Komitmen · <b>Konsisten</b></div>
+  </div>
+
+  <div class="wrap">
+    <!-- team standings -->
+    <div class="standings">
+      <div class="team tah">
+        <div class="label">Pasukan</div>
+        <div class="name">TEAM A</div>
+        <div class="metric down">−3.2%<small> berat</small></div>
+        <div class="sub">purata turun · 21 ahli</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="team opp">
+        <div class="label">Pasukan</div>
+        <div class="name">TEAM B</div>
+        <div class="metric down">−1.9%<small> berat</small></div>
+        <div class="sub">purata turun · 22 ahli</div>
+      </div>
+    </div>
+
+    <!-- weigh-in status (PIC view) -->
+    <div class="callout">
+      <div class="txt">
+        <div class="k">Minggu 10 · 28 dari 43 direkod</div>
+        <div class="d">3 jabatan belum siap. Sesi tutup Isnin tengah malam.</div>
+      </div>
+      <button class="btn" onclick="show('weigh')">Rekod Timbangan →</button>
+    </div>
+
+    <!-- events -->
+    <h2 class="sec-head">Agenda Majlis</h2>
+    <div class="events">
+      <div class="event">
+        <div class="date"><div class="d">14</div><div class="m">Ogos</div></div>
+        <div class="info">
+          <div class="t">Senaman Pagi Beramai-ramai</div>
+          <div class="meta">7:00 pagi · Padang HQ · pasukan dicampur</div>
+        </div>
+        <button class="rsvp" onclick="rsvp(this)">RSVP</button>
+      </div>
+      <div class="event">
+        <div class="date"><div class="d">28</div><div class="m">Ogos</div></div>
+        <div class="info">
+          <div class="t">Hiking Bukit Gasing</div>
+          <div class="meta">6:30 pagi · dicampur · bawa air sendiri</div>
+        </div>
+        <button class="rsvp done">Hadir ✓</button>
+      </div>
+      <div class="event">
+        <div class="date"><div class="d">11</div><div class="m">Sept</div></div>
+        <div class="info">
+          <div class="t">Futsal Antara Unit</div>
+          <div class="meta">8:00 malam · court dalam · dicampur</div>
+        </div>
+        <button class="rsvp" onclick="rsvp(this)">RSVP</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="roster">
+      <b>Team TAH:</b> Along · Long Shi · Ayahchor · Cik Su · Bonda · Ayahanda · Dragon · Yong · Kuale · Ada? · Lengchai · Ecah Rapat
+    </div>
+  </footer>
+</section>
+
+<!-- ================= PIC BATCH ENTRY ================= -->
+<section class="screen" id="weigh">
+  <div class="weigh wide">
+    <div class="eyebrow">Sesi Timbang · Hari Isnin · Rekod oleh PIC</div>
+    <h2>REKOD <span class="red">BERAT</span></h2>
+    <div class="week-of">Minggu 10 — 4 hingga 10 Ogos 2026</div>
+
+    <!-- STEP 1: pick department -->
+    <div id="deptPick">
+      <label class="pick-label">Pilih jabatan untuk direkod</label>
+      <div class="dept-grid">
+        <button class="dept" onclick="openDept('Akademik',6,6)">
+          <div class="dn">Akademik</div><div class="ds done">6 / 6 siap ✓</div>
+        </button>
+        <button class="dept" onclick="openDept('Operasi',8,5)">
+          <div class="dn">Operasi</div><div class="ds">5 / 8 direkod</div>
+        </button>
+        <button class="dept" onclick="openDept('Pemasaran',5,0)">
+          <div class="dn">Pemasaran</div><div class="ds pending">0 / 5 · belum mula</div>
+        </button>
+        <button class="dept" onclick="openDept('Kewangan',4,4)">
+          <div class="dn">Kewangan</div><div class="ds done">4 / 4 siap ✓</div>
+        </button>
+        <button class="dept" onclick="openDept('Sokongan IT',7,7)">
+          <div class="dn">Sokongan IT</div><div class="ds done">7 / 7 siap ✓</div>
+        </button>
+        <button class="dept" onclick="openDept('Khidmat Pelanggan',7,6)">
+          <div class="dn">Khidmat Pelanggan</div><div class="ds">6 / 7 direkod</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: roster for chosen department -->
+    <div id="deptRoster" style="display:none">
+      <button class="back" onclick="closeDept()">← Semua jabatan</button>
+      <div class="roster-head">
+        <div class="rh-name" id="rosterDeptName">Operasi</div>
+        <div class="rh-prog" id="rosterProg">5 / 8 direkod</div>
+      </div>
+
+      <div class="roster-list" id="rosterList"><!-- injected --></div>
+
+      <button class="btn gold submit" onclick="saveDept()">Simpan Jabatan Ini</button>
+      <div class="fine">Boleh betulkan sampai Isnin tengah malam. Lepas tu terkunci.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ADMIN: MASTER ROSTER ================= -->
+<section class="screen" id="admin">
+  <div class="admin-wrap">
+    <div class="eyebrow" style="text-align:center">Panel Admin · Senarai Induk</div>
+    <h2 class="admin-title">STAF & <span class="red">PASUKAN</span></h2>
+
+    <!-- live team balance -->
+    <div class="balance">
+      <div class="bteam">
+        <div class="bt-name">TEAM A</div>
+        <div class="bt-count" id="aCount">0</div>
+        <div class="bt-sub">ahli · BMI purata <b id="aBmi">—</b></div>
+      </div>
+      <div class="bbar">
+        <div class="bbar-fill" id="balFill"></div>
+        <div class="bbar-label" id="balLabel">seimbang</div>
+      </div>
+      <div class="bteam">
+        <div class="bt-name">TEAM B</div>
+        <div class="bt-count" id="bCount">0</div>
+        <div class="bt-sub">ahli · BMI purata <b id="bBmi">—</b></div>
+      </div>
+    </div>
+    <div class="bal-note">Agih setiap staf ke Team A atau B. Cuba kekalkan saiz &amp; BMI purata yang seimbang.</div>
+
+    <div class="admin-list" id="adminList"><!-- injected --></div>
+
+    <button class="btn gold submit" style="max-width:640px;margin:24px auto 0;display:block" onclick="alert('Senarai induk disimpan.')">Simpan Senarai Induk</button>
+  </div>
+</section>
+
+<!-- ================= ADMIN ANALYTICS ================= -->
+<section class="screen" id="analytics">
+  <div class="ana-wrap">
+    <div class="eyebrow" style="text-align:center">Analitik · Pandangan Admin</div>
+    <h2 class="admin-title">PRESTASI <span class="red">PENUH</span></h2>
+
+    <!-- team A vs B summary -->
+    <div class="standings" style="margin-bottom:14px">
+      <div class="team tah">
+        <div class="label">Pasukan</div>
+        <div class="name">TEAM A</div>
+        <div class="metric down" id="anaAdelta">−3.2%</div>
+        <div class="sub">purata turun berat · <span id="anaAcount">21</span> ahli</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="team opp">
+        <div class="label">Pasukan</div>
+        <div class="name">TEAM B</div>
+        <div class="metric down" id="anaBdelta">−1.9%</div>
+        <div class="sub">purata turun berat · <span id="anaBcount">22</span> ahli</div>
+      </div>
+    </div>
+
+    <!-- controls -->
+    <div class="ana-controls">
+      <div class="ana-filter">
+        <button class="af on" onclick="filterTeam('all',this)">Semua</button>
+        <button class="af" onclick="filterTeam('A',this)">Team A</button>
+        <button class="af" onclick="filterTeam('B',this)">Team B</button>
+      </div>
+      <div class="ana-week">Baseline = rekod timbang pertama setiap staf</div>
+    </div>
+
+    <!-- TABLE 1: weekly grid -->
+    <div class="tbl-head">
+      <h3 class="tbl-title">Rekod Mingguan</h3>
+      <div class="metric-tog">
+        <button class="mt on" onclick="setMetric('weight',this)">Berat (kg)</button>
+        <button class="mt" onclick="setMetric('bmi',this)">BMI</button>
+        <button class="mt" onclick="setMetric('change',this)">Perubahan</button>
+      </div>
+    </div>
+    <div class="ana-scroll">
+      <table class="ana-table grid-table">
+        <thead><tr id="gridHead"><!-- injected --></tr></thead>
+        <tbody id="gridBody"><!-- injected --></tbody>
+      </table>
+    </div>
+    <div class="fine" style="text-align:left;margin:10px 0 4px">Baca melintang untuk perjalanan seorang staf · <span style="color:var(--bone-dim)">—</span> = tak timbang · dalam mod Perubahan: <span style="color:var(--bone-dim)">·</span> = minggu pertama (takde banding)</div>
+
+    <!-- TABLE 2: deltas summary -->
+    <div class="tbl-head" style="margin-top:40px">
+      <h3 class="tbl-title">Ringkasan Perubahan</h3>
+      <div class="ana-week">dari baseline ke terkini</div>
+    </div>
+    <div class="ana-scroll">
+      <table class="ana-table">
+        <thead>
+          <tr>
+            <th class="lft">Nama</th>
+            <th>Pasukan</th>
+            <th>Minggu<br><small>direkod</small></th>
+            <th>Berat Mula<br><small>kg</small></th>
+            <th>Berat Kini<br><small>kg</small></th>
+            <th>Δ Berat</th>
+            <th>BMI Mula</th>
+            <th>BMI Kini</th>
+            <th>Δ BMI</th>
+          </tr>
+        </thead>
+        <tbody id="sumBody"><!-- injected --></tbody>
+      </table>
+    </div>
+    <div class="fine" style="text-align:left;margin-top:12px"><span style="color:var(--gold)">hijau/emas</span> = turun · <span style="color:#e2384a">merah</span> = naik · lajur "Minggu direkod" beza sebab baseline ikut timbang pertama masing-masing</div>
+  </div>
+</section>
+
+<script>
+  function show(id, el){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+    document.getElementById(id).classList.add('on');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    if(el) el.classList.add('active');
+    else {
+      const map={landing:0,weigh:1};
+      document.querySelectorAll('.tab')[map[id]].classList.add('active');
+    }
+    if(id==='weigh') closeDept();
+    window.scrollTo(0,0);
+  }
+
+  // demo roster data — each staff carries their own locked height (cm) + last recorded weight
+  const STAFF = {
+    'Akademik':[['Farah','farah',160,58],['Hakim','hakim',175,72],['Nurul','nurul',158,55],['Zaidi','zaidi',170,80],['Aina','aina',162,60],['Rahman','rahman',178,88]],
+    'Operasi':[['Along','along',172,84],['Dragon','dragon',180,95],['Kuale','kuale',165,62],['Yong','yong',168,70],['Ecah','ecah',157,54],['Bonda','bonda',163,null],['Ayahanda','ayah',176,null],['Lengchai','leng',174,null]],
+    'Pemasaran':[['Suria','suria',161,59],['Faiz','faiz',177,90],['Mira','mira',159,56],['Danial','danial',171,78],['Ilya','ilya',164,61]],
+    'Kewangan':[['Aziz','aziz',169,74],['Liyana','liyana',160,57],['Tan','tan',173,68],['Siva','siva',175,82]],
+    'Sokongan IT':[['Zen','zen',172,79],['Akmal','akmal',170,71],['Aqil','aqil',168,66],['Pian','pian',174,85],['Wan','wan',166,63],['Haziq','haziq',179,92],['Nabil','nabil',171,77]],
+    'Khidmat Pelanggan':[['Sofia','sofia',158,53],['Amir','amir',176,86],['Qistina','qis',162,60],['Raju','raju',170,73],['Elle','elle',160,58],['Fikri','fikri',173,81],['Muna','muna',159,null]]
+  };
+
+  function rowBMI(w,hCm){ if(!w||w<=0) return null; const h=hCm/100; return w/(h*h); }
+  function bmiColor(b){ if(b<18.5)return'#e2c877'; if(b<25)return'#c9a24b'; if(b<30)return'#e2384a'; return'#b11226'; }
+
+  function openDept(name){
+    document.getElementById('deptPick').style.display='none';
+    document.getElementById('deptRoster').style.display='block';
+    document.getElementById('rosterDeptName').textContent=name;
+    const list=document.getElementById('rosterList'); list.innerHTML='';
+    STAFF[name].forEach(([nm,id,h,w])=>{
+      const b=rowBMI(w,h);
+      const row=document.createElement('div');
+      row.className='rrow'+(w?' filled':'');
+      row.dataset.h=h;
+      row.innerHTML=
+        '<div class="rn">'+nm+'<small>tinggi '+h+' cm</small></div>'+
+        '<div class="rin"><input type="number" inputmode="decimal" placeholder="00.0" value="'+(w||'')+'" oninput="rowCalc(this)"><span class="u">KG</span></div>'+
+        '<div class="rbmi'+(b?'':' empty')+'">'+(b?b.toFixed(1):'—')+'</div>';
+      if(b) row.querySelector('.rbmi').style.color=bmiColor(b);
+      list.appendChild(row);
+    });
+    updateProg();
+    window.scrollTo(0,0);
+  }
+  function closeDept(){
+    document.getElementById('deptRoster').style.display='none';
+    document.getElementById('deptPick').style.display='block';
+  }
+  function rowCalc(inp){
+    const row=inp.closest('.rrow');
+    const w=parseFloat(inp.value), h=parseFloat(row.dataset.h);
+    const el=row.querySelector('.rbmi');
+    const b=rowBMI(w,h);
+    if(b){el.textContent=b.toFixed(1);el.classList.remove('empty');el.style.color=bmiColor(b);row.classList.add('filled');}
+    else{el.textContent='—';el.classList.add('empty');el.style.color='';row.classList.remove('filled');}
+    updateProg();
+  }
+  function updateProg(){
+    const rows=[...document.querySelectorAll('#rosterList .rrow')];
+    const done=rows.filter(r=>parseFloat(r.querySelector('input').value)>0).length;
+    document.getElementById('rosterProg').textContent=done+' / '+rows.length+' direkod';
+  }
+  function saveDept(){
+    const rows=[...document.querySelectorAll('#rosterList .rrow')];
+    const done=rows.filter(r=>parseFloat(r.querySelector('input').value)>0).length;
+    alert('Disimpan. '+done+' dari '+rows.length+' ahli direkod untuk minggu ni.');
+    closeDept();
+  }
+  function rsvp(el){el.textContent='Hadir ✓';el.classList.add('done');el.onclick=null;}
+
+  // ---- ADMIN: master roster + live team balance ----
+  // seed each person a team (A/B) — spread for demo; blanks left unassigned on purpose
+  const TEAMS = {};
+  (function seed(){
+    let i=0;
+    for(const d in STAFF){ STAFF[d].forEach(s=>{ TEAMS[s[1]]= (i++%2===0)?'A':'B'; }); }
+    TEAMS['muna']=null; TEAMS['leng']=null; // a couple unassigned to show the state
+  })();
+
+  function renderAdmin(){
+    const list=document.getElementById('adminList'); list.innerHTML='';
+    for(const d in STAFF){
+      const dep=document.createElement('div'); dep.className='adept';
+      const unassigned=STAFF[d].filter(s=>!TEAMS[s[1]]).length;
+      dep.innerHTML='<div class="adept-head" onclick="this.parentNode.classList.toggle(\'open\')">'+
+        '<div><div class="an">'+d+'</div><div class="am">'+STAFF[d].length+' staf'+(unassigned?' · '+unassigned+' belum diagih':'')+'</div></div>'+
+        '<div class="chev">›</div></div>';
+      const body=document.createElement('div'); body.className='adept-body';
+      STAFF[d].forEach(([nm,id,h])=>{
+        const t=TEAMS[id];
+        const row=document.createElement('div'); row.className='arow';
+        row.innerHTML='<div class="aname">'+nm+'</div>'+
+          '<div class="aheight"><input type="number" value="'+h+'"><span class="u">CM</span></div>'+
+          '<div class="teamtog">'+
+            '<button class="'+(t==='A'?'on':'')+'" onclick="setTeam(\''+id+'\',\'A\',this)">A</button>'+
+            '<button class="'+(t==='B'?'on':'')+'" onclick="setTeam(\''+id+'\',\'B\',this)">B</button>'+
+          '</div>';
+        body.appendChild(row);
+      });
+      dep.appendChild(body); list.appendChild(dep);
+    }
+    updateBalance();
+  }
+  function setTeam(id,team,btn){
+    TEAMS[id]=team;
+    const tog=btn.parentNode; tog.querySelectorAll('button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    updateBalance();
+  }
+  function updateBalance(){
+    let a=[],b=[];
+    for(const d in STAFF){ STAFF[d].forEach(([nm,id,h,w])=>{
+      const bmi=rowBMI(w,h);
+      if(TEAMS[id]==='A'&&bmi)a.push(bmi);
+      if(TEAMS[id]==='B'&&bmi)b.push(bmi);
+    });}
+    const avg=x=>x.length?(x.reduce((s,v)=>s+v,0)/x.length):null;
+    document.getElementById('aCount').textContent=a.length;
+    document.getElementById('bCount').textContent=b.length;
+    document.getElementById('aBmi').textContent=avg(a)?avg(a).toFixed(1):'—';
+    document.getElementById('bBmi').textContent=avg(b)?avg(b).toFixed(1):'—';
+    const total=a.length+b.length||1;
+    const pct=Math.round(a.length/total*100);
+    const fill=document.getElementById('balFill');
+    fill.style.width=pct+'%';
+    const diff=Math.abs(a.length-b.length);
+    const lbl=document.getElementById('balLabel');
+    if(diff===0){fill.style.background='#c9a24b';lbl.textContent='seimbang';}
+    else if(diff<=2){fill.style.background='#e2c877';lbl.textContent='hampir seimbang ('+diff+' beza)';}
+    else{fill.style.background='#b11226';lbl.textContent='tak seimbang ('+diff+' beza)';}
+  }
+  renderAdmin();
+
+  // ---- ANALYTICS: weekly history per staff ----
+  const WEEKS=10;
+  // build a weekly weight series per person. startWeek varies (personal baseline),
+  // some later weeks null to simulate missed weigh-ins.
+  const HIST=[]; // {nm,id,h,dept,team,series:[{wk,wt}|null...]}
+  (function buildHist(){
+    for(const d in STAFF){ STAFF[d].forEach(([nm,id,h,w])=>{
+      if(!w) return;
+      const team=TEAMS[id]||'A';
+      const startWk = Math.random()<0.15 ? (1+Math.floor(Math.random()*3)) : 1; // some join late
+      let cur = Math.round((w + (Math.random()*4+1))*10)/10; // heavier at start
+      const series=[];
+      for(let wk=1;wk<=WEEKS;wk++){
+        if(wk<startWk){ series.push(null); continue; }
+        if(wk>startWk && Math.random()<0.08){ series.push(null); continue; } // occasional miss
+        if(wk>startWk) cur = Math.round((cur + (Math.random()*0.9-0.6))*10)/10; // drift down mostly
+        series.push({wk,wt:cur});
+      }
+      // force final week to the known current weight
+      for(let k=series.length-1;k>=0;k--){ if(series[k]){ series[k].wt=w; break; } }
+      HIST.push({nm,id,h,dept:d,team,series});
+    });}
+  })();
+
+  const bmiOf=(wt,h)=>wt/((h/100)**2);
+  function firstRec(s){ return s.find(x=>x); }
+  function lastRec(s){ for(let i=s.length-1;i>=0;i--) if(s[i]) return s[i]; return null; }
+  function recCount(s){ return s.filter(x=>x).length; }
+
+  let anaFilter='all', anaMetric='weight';
+
+  function renderGrid(){
+    const head=document.getElementById('gridHead');
+    head.innerHTML='<th class="lft">Nama</th><th>Pasukan</th>'+
+      Array.from({length:WEEKS},(_,i)=>'<th class="wk-h">M'+(i+1)+'</th>').join('');
+    const body=document.getElementById('gridBody'); body.innerHTML='';
+    HIST.forEach(p=>{
+      if(anaFilter!=='all'&&p.team!==anaFilter) return;
+      let cells='', prev=null;
+      p.series.forEach(rec=>{
+        if(!rec){ cells+='<td class="wk miss">—</td>'; return; }
+        if(anaMetric==='change'){
+          if(prev===null){ cells+='<td class="wk flat">·</td>'; } // no prior week to compare
+          else{
+            const dv=rec.wt-prev;
+            const cls=dv<-0.05?'down':(dv>0.05?'up':'flat');
+            const s=dv>0?'+':'';
+            cells+='<td class="wk '+cls+'">'+s+dv.toFixed(1)+'</td>';
+          }
+          prev=rec.wt;
+        } else {
+          const val = anaMetric==='weight' ? rec.wt.toFixed(1) : bmiOf(rec.wt,p.h).toFixed(1);
+          cells+='<td class="wk">'+val+'</td>';
+        }
+      });
+      body.innerHTML+='<tr><td class="name">'+p.nm+'</td><td><span class="tpill '+p.team+'">'+p.team+'</span></td>'+cells+'</tr>';
+    });
+  }
+
+  function fmtDelta(v,unit){
+    const s=v>0?'+':'';
+    const cls=v<-0.05?'down':(v>0.05?'up':'flat');
+    return '<span class="'+cls+'">'+s+v.toFixed(1)+(unit||'')+'</span>';
+  }
+
+  function renderSummary(){
+    const body=document.getElementById('sumBody'); body.innerHTML='';
+    let aB=[],aC=[],bB=[],bC=[];
+    HIST.forEach(p=>{
+      const f=firstRec(p.series), l=lastRec(p.series);
+      if(!f||!l) return;
+      const wBase=f.wt, wCur=l.wt, bBase=bmiOf(wBase,p.h), bCur=bmiOf(wCur,p.h);
+      if(p.team==='A'){aB.push(wBase);aC.push(wCur);} else {bB.push(wBase);bC.push(wCur);}
+      if(anaFilter!=='all'&&p.team!==anaFilter) return;
+      body.innerHTML+='<tr>'+
+        '<td class="name">'+p.nm+'</td>'+
+        '<td><span class="tpill '+p.team+'">'+p.team+'</span></td>'+
+        '<td>'+recCount(p.series)+'</td>'+
+        '<td>'+wBase.toFixed(1)+'</td>'+
+        '<td>'+wCur.toFixed(1)+'</td>'+
+        '<td>'+fmtDelta(wCur-wBase)+'</td>'+
+        '<td>'+bBase.toFixed(1)+'</td>'+
+        '<td>'+bCur.toFixed(1)+'</td>'+
+        '<td>'+fmtDelta(bCur-bBase)+'</td>'+
+      '</tr>';
+    });
+    const pct=(bl,cu)=>{ if(!bl.length)return null; let s=0; for(let i=0;i<bl.length;i++)s+=(cu[i]-bl[i])/bl[i]*100; return s/bl.length; };
+    const ap=pct(aB,aC), bp=pct(bB,bC);
+    document.getElementById('anaAdelta').textContent=ap!=null?ap.toFixed(1)+'%':'—';
+    document.getElementById('anaBdelta').textContent=bp!=null?bp.toFixed(1)+'%':'—';
+    document.getElementById('anaAcount').textContent=aB.length;
+    document.getElementById('anaBcount').textContent=bB.length;
+  }
+
+  function renderAna(){ renderGrid(); renderSummary(); }
+  function filterTeam(t,btn){ anaFilter=t; document.querySelectorAll('.af').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderAna(); }
+  function setMetric(m,btn){ anaMetric=m; document.querySelectorAll('.mt').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); renderGrid(); }
+  renderAna();
+</script>
+</body>
+</html>
