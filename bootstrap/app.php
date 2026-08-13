@@ -14,6 +14,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        /*
+         | Behind Cloudflare, so the origin only ever sees plain HTTP. Without
+         | trusting the forwarded headers Laravel builds http:// URLs on an
+         | https:// site, which shows up as redirect loops or mixed content
+         | right after sign-in. The proxy is the only route to this app, so
+         | trusting it is safe here.
+         */
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
             'consented' => RequireConsent::class,
