@@ -97,8 +97,12 @@
 
         <div class="mt-6 flex flex-wrap items-center gap-3">
             @if ($errorCount === 0)
-                <x-ui.btn wire:click="commit" variant="gold" class="px-6 py-3 text-sm">
-                    Import {{ $createCount + $updateCount }} {{ Str::plural('row', $createCount + $updateCount) }}
+                <x-ui.btn wire:click="commit" wire:loading.attr="disabled" wire:target="commit"
+                          variant="gold" class="px-6 py-3 text-sm">
+                    <span wire:loading.remove wire:target="commit">
+                        Import {{ $createCount + $updateCount }} {{ Str::plural('row', $createCount + $updateCount) }}
+                    </span>
+                    <span wire:loading wire:target="commit">Importing…</span>
                 </x-ui.btn>
             @else
                 <p class="font-cond text-sm tracking-wide text-blood-bright uppercase">

@@ -99,8 +99,23 @@ class WeighInSession extends Component
             ->all();
     }
 
-    public function save(WeighInRecorder $recorder): void
+    /**
+     * @param  array<int|string,mixed>  $weights  sent in one payload by the browser
+     *
+     * The whole department is submitted in a single request. Binding each field
+     * with wire:model would fire a round trip per blur — forty of them for a
+     * department of forty, which is painful on a phone next to a scale.
+     * Omitted (or empty) falls back to the server-side property, so the screen
+     * still works without JavaScript and existing tests keep passing.
+     */
+    public function save(array $weights = []): void
     {
+        $recorder = app(WeighInRecorder::class);
+
+        if ($weights !== []) {
+            $this->weights = $weights;
+        }
+
         if (! $this->canEdit()) {
             $this->flash = 'This week is locked.';
 
@@ -199,12 +214,19 @@ class WeighInSession extends Component
             ->filter(fn (array $row) => $row['expected'] > 0)
             ->values();
 
+        $roster = $this->roster();
+
         return view('livewire.weigh-in-session', [
             'week' => $week,
             'weeks' => ChallengeWeek::elapsed()->reverse()->values(),
             'departments' => $departments,
-            'roster' => $this->roster(),
+            'roster' => $roster,
             'editable' => $this->canEdit(),
+            // Counted against the OPEN department only: $weights holds the whole
+            // week, so counting it directly would report every department's total.
+            'recordedNow' => $roster->filter(
+                fn (User $person) => trim((string) ($this->weights[$person->id] ?? '')) !== ''
+            )->count(),
         ]);
     }
 }

@@ -24,6 +24,23 @@
         Full <span class="text-blood">Picture</span>
     </h1>
 
+    @if ($weeks->isEmpty() || $grid->isEmpty())
+        <div class="border border-ink-3 bg-ink-2 px-6 py-12 text-center">
+            <p class="font-display text-2xl font-semibold uppercase">
+                {{ $grid->isEmpty() ? 'Nobody to report on yet' : 'The challenge hasn\'t started' }}
+            </p>
+            <p class="mx-auto mt-3 max-w-md font-cond text-sm tracking-wide text-bone-dim uppercase">
+                {{ $grid->isEmpty()
+                    ? 'Add staff to the roster, then record a weigh-in.'
+                    : 'Week 1 begins '.\App\Support\ChallengeWeek::first()->startDate->format('j F Y').'.' }}
+            </p>
+            <x-ui.btn as="a" href="{{ $grid->isEmpty() ? route('roster') : route('weigh-in') }}"
+                      variant="gold" class="mt-6 px-5 py-2.5 text-sm">
+                {{ $grid->isEmpty() ? 'Go to the roster' : 'Go to weigh-in' }}
+            </x-ui.btn>
+        </div>
+    @else
+
     <x-ui.standings :standings="$standings" />
 
     {{-- Controls --}}
@@ -226,4 +243,5 @@
         or across different numbers of weeks · the "Weeks" column is there so no number reads as more
         than it is
     </p>
+    @endif
 </div>

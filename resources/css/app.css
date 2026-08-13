@@ -59,6 +59,28 @@
             radial-gradient(90% 60% at 90% 110%, rgb(177 18 38 / 0.1), transparent 55%);
     }
 
+    /*
+     | One focus rule for every control, rather than a utility class per
+     | element. Gold on near-black is the only pairing here with enough contrast
+     | to be unmissable when tabbing.
+     */
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+        outline: 2px solid var(--color-gold);
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
+
+    /* Respect the OS setting rather than animating regardless. */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
     /* Kill the spinner on weight/height number inputs — it fights the type. */
     input[type='number']::-webkit-outer-spin-button,
     input[type='number']::-webkit-inner-spin-button {

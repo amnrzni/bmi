@@ -3,8 +3,11 @@
     $neverIn = $staff->filter->hasNeverSignedIn()->count();
 @endphp
 
-<div class="border border-ink-3 bg-ink-2" x-data="{ open: false }" wire:key="dept-{{ $name }}">
+{{-- Open by default: six departments closed meant six clicks before you could
+     see anybody, and finding one person was the most common reason to be here. --}}
+<div class="border border-ink-3 bg-ink-2" x-data="{ open: true }" wire:key="dept-{{ $name }}">
     <button type="button" @click="open = !open"
+            :aria-expanded="open ? 'true' : 'false'"
             class="flex w-full cursor-pointer items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-ink-3">
         <span>
             <span class="block font-display text-[17px] font-semibold tracking-wide uppercase">{{ $name }}</span>
@@ -18,7 +21,8 @@
                 @endif
             </span>
         </span>
-        <span class="font-display text-gold transition-transform duration-200" :class="open && 'rotate-90'">›</span>
+        <span aria-hidden="true" class="font-display text-gold transition-transform duration-200"
+              :class="open && 'rotate-90'">›</span>
     </button>
 
     <div x-show="open" x-collapse class="border-t border-ink-3">

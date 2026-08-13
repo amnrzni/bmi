@@ -1,7 +1,9 @@
 <?php
 
+use App\Livewire\Analytics;
 use App\Livewire\Roster;
 use App\Livewire\RosterImport;
+use App\Livewire\WeighInSession;
 use App\Models\Department;
 use App\Models\Team;
 use App\Models\User;
@@ -294,4 +296,35 @@ it('rejects a file that is not a csv', function () {
         ->test(RosterImport::class)
         ->set('file', UploadedFile::fake()->create('roster.pdf', 10))
         ->assertSet('rows', null);
+});
+
+// --------------------------------------------------------------- empty states
+
+it('tells a brand-new admin what to do when the roster is empty', function () {
+    User::query()->whereKeyNot($this->admin->id)->forceDelete();
+    $this->admin->update(['is_participant' => false]);
+
+    Livewire::actingAs($this->admin)
+        ->test(Roster::class)
+        ->assertSee('Nobody on the roster yet')
+        ->assertSee('Import CSV');
+});
+
+it('points analytics at the roster when there is nobody to report on', function () {
+    User::query()->whereKeyNot($this->admin->id)->forceDelete();
+    $this->admin->update(['is_participant' => false]);
+
+    Livewire::actingAs($this->admin)
+        ->test(Analytics::class)
+        ->assertSee('Nobody to report on yet')
+        ->assertSee('Go to the roster');
+});
+
+it('tells the weigh-in screen there is nobody to weigh', function () {
+    User::query()->whereKeyNot($this->admin->id)->forceDelete();
+    $this->admin->update(['is_participant' => false]);
+
+    Livewire::actingAs($this->admin)
+        ->test(WeighInSession::class)
+        ->assertSee('Nobody on the roster yet');
 });

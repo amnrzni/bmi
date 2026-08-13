@@ -160,6 +160,34 @@ it('counts progress against the open department only, not the whole week', funct
     Livewire::actingAs($this->admin)
         ->test(WeighInSession::class)
         ->call('openDepartment', $this->department->id)
-        ->assertSee('0 / 1 recorded')
-        ->assertDontSee('1 / 1 recorded');
+        ->assertViewHas('recordedNow', 0);
+});
+
+it('accepts the whole department in a single payload', function () {
+    $colleague = User::factory()->create([
+        'name' => 'Dragon',
+        'department_id' => $this->department->id,
+        'height_cm' => 180,
+    ]);
+
+    // The browser submits every field at once rather than a request per blur.
+    Livewire::actingAs($this->admin)
+        ->test(WeighInSession::class)
+        ->call('openDepartment', $this->department->id)
+        ->call('save', [$this->staff->id => '84.5', $colleague->id => '95.0'])
+        ->assertHasNoErrors();
+
+    expect(WeighIn::count())->toBe(2)
+        ->and((float) WeighIn::where('user_id', $this->staff->id)->value('weight_kg'))->toBe(84.5);
+});
+
+it('still works from the server-side property when javascript is absent', function () {
+    Livewire::actingAs($this->admin)
+        ->test(WeighInSession::class)
+        ->call('openDepartment', $this->department->id)
+        ->set("weights.{$this->staff->id}", '84.5')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(WeighIn::count())->toBe(1);
 });

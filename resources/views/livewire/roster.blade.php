@@ -17,8 +17,9 @@
     </h1>
 
     @if ($flash)
-        <div class="mb-5 border border-gold bg-gold/10 px-4 py-3 font-cond text-sm tracking-wide text-bone"
-             wire:key="flash-{{ md5($flash) }}">
+        {{-- Sticky: the roster is a long page and actions happen far from the top. --}}
+        <div role="status" wire:key="flash-{{ md5($flash) }}"
+             class="sticky top-2 z-30 mb-5 border border-gold bg-ink-2 px-4 py-3 font-cond text-sm tracking-wide text-bone shadow-lg shadow-ink">
             {{ $flash }}
         </div>
     @endif
@@ -155,8 +156,12 @@
             </div>
 
             <div class="mt-6 flex flex-wrap gap-3">
-                <x-ui.btn wire:click="saveStaff" variant="gold" class="px-6 py-3 text-sm">
-                    {{ $editingUserId ? 'Save changes' : 'Add to roster' }}
+                <x-ui.btn wire:click="saveStaff" wire:loading.attr="disabled" wire:target="saveStaff"
+                          variant="gold" class="px-6 py-3 text-sm">
+                    <span wire:loading.remove wire:target="saveStaff">
+                        {{ $editingUserId ? 'Save changes' : 'Add to roster' }}
+                    </span>
+                    <span wire:loading wire:target="saveStaff">Saving…</span>
                 </x-ui.btn>
                 <x-ui.btn wire:click="cancelStaff" variant="ghost" class="px-6 py-3 text-sm">Cancel</x-ui.btn>
             </div>
@@ -164,6 +169,22 @@
     @endif
 
     {{-- Departments --}}
+    @if ($headcount === 0)
+        <div class="border border-ink-3 bg-ink-2 px-6 py-12 text-center">
+            <p class="font-display text-2xl font-semibold uppercase">Nobody on the roster yet</p>
+            <p class="mx-auto mt-3 max-w-md font-cond text-sm tracking-wide text-bone-dim uppercase">
+                Import your sheet to load everyone at once, or add people one at a time.
+                Each person's email must match their QCXIS account, or they can't sign in.
+            </p>
+            <div class="mt-6 flex flex-wrap justify-center gap-3">
+                <x-ui.btn as="a" href="{{ route('roster.import') }}" variant="gold" class="px-5 py-2.5 text-sm">
+                    Import CSV
+                </x-ui.btn>
+                <x-ui.btn wire:click="newStaff" variant="ghost" class="px-5 py-2.5 text-sm">Add one person</x-ui.btn>
+            </div>
+        </div>
+    @endif
+
     <div class="space-y-3">
         @foreach ($departments as $department)
             @include('livewire.partials.roster-department', [
@@ -222,9 +243,11 @@
                         </div>
                         <div class="flex items-center gap-3 font-cond text-xs tracking-wide-cond uppercase">
                             <button type="button" wire:click="moveDepartment({{ $department->id }}, -1)"
-                                    class="cursor-pointer text-bone-dim hover:text-gold">↑</button>
+                                    aria-label="Move {{ $department->name }} up"
+                                    class="cursor-pointer px-1 text-bone-dim hover:text-gold">↑</button>
                             <button type="button" wire:click="moveDepartment({{ $department->id }}, 1)"
-                                    class="cursor-pointer text-bone-dim hover:text-gold">↓</button>
+                                    aria-label="Move {{ $department->name }} down"
+                                    class="cursor-pointer px-1 text-bone-dim hover:text-gold">↓</button>
                             <button type="button" wire:click="editDepartment({{ $department->id }})"
                                     class="cursor-pointer text-bone-dim hover:text-gold">Rename</button>
                             <button type="button" wire:click="deleteDepartment({{ $department->id }})"

@@ -8,6 +8,17 @@
 </head>
 <body class="min-h-screen bg-ink text-bone">
 
+{{--
+    One indicator for every Livewire request on every screen. `.delay` holds it
+    back ~200ms so quick actions don't flash a bar at you, while slow ones stop
+    feeling like a dead click.
+--}}
+<div wire:loading.delay class="fixed inset-x-0 top-0 z-50 h-0.5 animate-pulse bg-gold" role="status" aria-label="Working"></div>
+
+<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:bg-gold focus:px-4 focus:py-2 focus:font-cond focus:text-sm focus:font-semibold focus:tracking-wide focus:text-ink focus:uppercase">
+    Skip to content
+</a>
+
 @auth
     <nav class="relative z-20 flex flex-wrap items-center justify-between gap-3 border-b border-ink-3 px-5 py-4">
         <a href="{{ route('home') }}" class="font-display text-[15px] font-bold tracking-label uppercase">
@@ -47,7 +58,7 @@
     </nav>
 @endauth
 
-<main class="relative z-10">
+<main id="main" class="relative z-10">
     {{ $slot }}
 </main>
 
