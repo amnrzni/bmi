@@ -45,23 +45,17 @@
 
     {{-- Controls --}}
     <div class="my-5 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex gap-1.5">
-            <button type="button" wire:click="setTeam('all')"
-                    @class([
-                        'cursor-pointer border px-4.5 py-2 font-cond text-xs font-semibold tracking-wide-cond uppercase transition',
-                        'border-gold bg-gold text-ink' => $team === 'all',
-                        'border-ink-3 bg-ink-2 text-bone-dim hover:text-bone' => $team !== 'all',
-                    ])>All</button>
-
-            @foreach ($teams as $option)
-                <button type="button" wire:click="setTeam('{{ $option->code }}')"
-                        @class([
-                            'cursor-pointer border px-4.5 py-2 font-cond text-xs font-semibold tracking-wide-cond uppercase transition',
-                            'border-gold bg-gold text-ink' => $team === $option->code,
-                            'border-ink-3 bg-ink-2 text-bone-dim hover:text-bone' => $team !== $option->code,
-                        ])>{{ $option->name }}</button>
-            @endforeach
-        </div>
+        {{-- Dropdown rather than a button per team — a row of ~8 would overflow. --}}
+        <label class="flex items-center gap-2 font-cond text-xs tracking-wide-cond text-bone-dim uppercase">
+            Team
+            <select wire:model.live="team"
+                    class="border border-ink-3 bg-ink-2 px-3 py-2 font-cond text-xs font-semibold tracking-wide-cond text-bone uppercase outline-none focus:border-gold">
+                <option value="all">All teams</option>
+                @foreach ($teams as $option)
+                    <option value="{{ $option->code }}">{{ $option->name }}</option>
+                @endforeach
+            </select>
+        </label>
 
         <div class="font-cond text-xs tracking-label text-bone-dim uppercase">
             Baseline = each person's own first weigh-in

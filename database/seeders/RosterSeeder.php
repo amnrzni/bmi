@@ -76,9 +76,9 @@ class RosterSeeder extends Seeder
             );
 
             foreach ($staff as [$name, $heightCm]) {
-                // Alternate teams so a department is split across both — team
-                // assignment is per-individual, never per-department.
-                $team = $teams[$index % 2];
+                // Round-robin across all teams so departments split across them —
+                // team assignment is per-individual, never per-department.
+                $team = $teams[$index % $teams->count()];
 
                 User::updateOrCreate(
                     ['email' => Str::slug($name).'@example.test'],

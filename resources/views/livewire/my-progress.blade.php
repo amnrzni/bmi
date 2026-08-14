@@ -99,6 +99,11 @@
         <x-ui.section-head>Your team</x-ui.section-head>
         <x-ui.panel class="text-center">
             <div class="font-display text-2xl font-bold tracking-wide uppercase">{{ $teamStanding->team->name }}</div>
+            @if ($teamRank)
+                <div class="mt-1 font-cond text-xs tracking-label text-gold uppercase">
+                    {{ $teamRank }}{{ [1=>'st',2=>'nd',3=>'rd'][$teamRank] ?? 'th' }} of {{ $teamCount }} teams
+                </div>
+            @endif
             <div class="mt-1.5 font-display text-[34px] leading-none font-semibold {{ Fmt::deltaColor($teamStanding->averagePercentChange) }}">
                 {{ Fmt::percent($teamStanding->averagePercentChange) }}
             </div>

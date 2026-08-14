@@ -1,10 +1,11 @@
 @use('App\Support\Fmt')
 
 @php
+    // Flag teams whose headcount is notably off the average, so "is this even?"
+    // is still answerable across many teams without a two-team bar.
     $counts = $balance->pluck('count');
-    $total = max($counts->sum(), 1);
-    $difference = $counts->count() === 2 ? abs($counts[0] - $counts[1]) : 0;
-    $firstShare = round(($counts->first() ?? 0) / $total * 100);
+    $avgCount = $counts->count() ? $counts->avg() : 0;
+    $spread = $counts->count() > 1 ? $counts->max() - $counts->min() : 0;
 
     $inputClass = 'w-full border border-ink-3 bg-ink px-3 py-2.5 font-cond text-[15px] text-bone outline-none focus:border-gold';
     $labelClass = 'mb-2 block font-cond text-[13px] tracking-label text-bone-dim uppercase';
@@ -24,44 +25,38 @@
         </div>
     @endif
 
-    {{-- Live team balance --}}
-    <div class="grid grid-cols-1 items-center border border-ink-3 bg-ink-2 sm:grid-cols-[1fr_2fr_1fr]">
-        @foreach ($balance as $index => $side)
-            @if ($index === 1)
-                <div class="px-5 pb-4 sm:py-0">
-                    <div class="h-2 overflow-hidden rounded-full bg-ink-3">
-                        <div class="h-2 rounded-full transition-all duration-300
-                                    {{ $difference === 0 ? 'bg-gold' : ($difference <= 2 ? 'bg-gold-bright' : 'bg-blood') }}"
-                             style="width: {{ $firstShare }}%"></div>
-                    </div>
-                    <div class="mt-2 text-center font-cond text-[11px] tracking-label text-bone-dim uppercase">
-                        @if ($difference === 0)
-                            balanced
-                        @elseif ($difference <= 2)
-                            close ({{ $difference }} apart)
-                        @else
-                            uneven ({{ $difference }} apart)
-                        @endif
-                    </div>
-                </div>
-            @endif
-
-            <div class="px-4 py-5 text-center">
-                <div class="font-display text-lg font-bold tracking-wide text-gold uppercase">
-                    {{ $side['team']->name }}
-                </div>
-                <div class="my-0.5 font-display text-[40px] leading-none font-bold">{{ $side['count'] }}</div>
-                <div class="font-cond text-[11px] tracking-wide-cond text-bone-dim uppercase">
-                    members · starting BMI <b class="text-bone">{{ Fmt::bmi($side['avgBmi']) }}</b>
-                </div>
+    {{-- Team balance: a row per team, flagging any that are lopsided. --}}
+    @if ($balance->isNotEmpty())
+        <div class="border border-ink-3 bg-ink-2">
+            <div class="flex items-baseline justify-between border-b border-ink-3 px-5 py-3">
+                <span class="font-cond text-[13px] tracking-label text-bone-dim uppercase">Team balance</span>
+                <span class="font-cond text-[11px] tracking-wide-cond uppercase {{ $spread <= 2 ? 'text-gold' : 'text-blood-bright' }}">
+                    {{ $spread <= 2 ? 'evenly split' : $spread.' apart, largest to smallest' }}
+                </span>
             </div>
-        @endforeach
-    </div>
 
-    <p class="my-4 text-center font-cond text-xs tracking-wide text-bone-dim uppercase">
-        Balance is scored on headcount only. Weight-loss potential can't be measured up front, so this
-        gets you a defensible split — not a scientific one.
-    </p>
+            <div class="divide-y divide-ink-3">
+                @foreach ($balance as $side)
+                    @php $off = abs($side['count'] - $avgCount) > 2; @endphp
+                    <div class="flex items-center justify-between gap-4 px-5 py-2.5">
+                        <span class="font-cond text-[15px] text-bone">{{ $side['team']->name }}</span>
+                        <span class="flex items-baseline gap-3 font-cond text-[11px] tracking-wide-cond text-bone-dim uppercase">
+                            <span>BMI <b class="text-bone">{{ Fmt::bmi($side['avgBmi']) }}</b></span>
+                            <span class="inline-flex h-6 min-w-6 items-center justify-center rounded-sm px-1.5 font-display text-base font-bold
+                                         {{ $off ? 'bg-blood/20 text-blood-bright' : 'bg-ink-3 text-bone' }}">
+                                {{ $side['count'] }}
+                            </span>
+                        </span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        <p class="my-4 text-center font-cond text-xs tracking-wide text-bone-dim uppercase">
+            Balance is judged on headcount only. Weight-loss potential can't be measured up front, so
+            this gets you a defensible split — not a scientific one.
+        </p>
+    @endif
 
     {{-- Roster health. "Never signed in" is the only reliable sign of a wrong email. --}}
     <div class="mb-5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border border-ink-3 bg-ink-2 px-5 py-3 text-center font-cond text-xs tracking-wide-cond uppercase">
@@ -199,6 +194,77 @@
                 'staff' => $unassigned,
             ])
         @endif
+    </div>
+
+    {{-- Team management --}}
+    <div x-ref="teams" class="mt-10">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="brushstroke flex items-center gap-3 font-display text-xl font-bold tracking-wide uppercase">
+                Teams
+            </h2>
+            @unless ($showTeamForm)
+                <x-ui.btn wire:click="newTeam" variant="ghost" class="px-4 py-2 text-xs">+ Add team</x-ui.btn>
+            @endunless
+        </div>
+
+        @if ($showTeamForm)
+            <x-ui.panel class="mb-3">
+                <label for="teamName" class="{{ $labelClass }}">
+                    {{ $editingTeamId ? 'Rename team' : 'New team' }}
+                </label>
+                <input id="teamName" type="text" wire:model="teamName" wire:keydown.enter="saveTeam"
+                       placeholder="e.g. Harimau" class="{{ $inputClass }}">
+                @error('teamName') <p class="mt-1 font-cond text-sm text-blood-bright">{{ $message }}</p> @enderror
+
+                <div class="mt-4 flex gap-3">
+                    <x-ui.btn wire:click="saveTeam" variant="gold" class="px-5 py-2.5 text-sm">Save</x-ui.btn>
+                    <x-ui.btn wire:click="$set('showTeamForm', false)" variant="ghost" class="px-5 py-2.5 text-sm">
+                        Cancel
+                    </x-ui.btn>
+                </div>
+            </x-ui.panel>
+        @endif
+
+        <x-ui.panel :padded="false">
+            <div class="divide-y divide-ink-3">
+                @foreach ($teams as $team)
+                    <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3"
+                         wire:key="team-row-{{ $team->id }}">
+                        <div>
+                            <span class="font-cond text-base text-bone">{{ $team->name }}</span>
+                            <span class="ml-2 rounded-sm bg-bone/10 px-2 py-0.5 font-cond text-[11px] font-semibold tracking-wide-cond text-bone-dim uppercase">
+                                {{ $team->code }}
+                            </span>
+                            <span class="ml-2 font-cond text-xs tracking-wide-cond text-bone-dim uppercase">
+                                {{ $team->members_count }} {{ Str::plural('member', $team->members_count) }}
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-3 font-cond text-xs tracking-wide-cond uppercase">
+                            <button type="button" wire:click="moveTeam({{ $team->id }}, -1)"
+                                    aria-label="Move {{ $team->name }} up"
+                                    class="cursor-pointer px-1 text-bone-dim hover:text-gold">↑</button>
+                            <button type="button" wire:click="moveTeam({{ $team->id }}, 1)"
+                                    aria-label="Move {{ $team->name }} down"
+                                    class="cursor-pointer px-1 text-bone-dim hover:text-gold">↓</button>
+                            <button type="button" wire:click="editTeam({{ $team->id }})"
+                                    class="cursor-pointer text-bone-dim hover:text-gold">Rename</button>
+                            <button type="button" wire:click="deleteTeam({{ $team->id }})"
+                                    class="cursor-pointer text-bone-dim hover:text-blood-bright">Delete</button>
+                        </div>
+                    </div>
+                @endforeach
+
+                @if ($teams->isEmpty())
+                    <p class="px-5 py-6 text-center font-cond text-sm tracking-wide text-bone-dim uppercase">
+                        No teams yet. Add a few, then assign people to them.
+                    </p>
+                @endif
+            </div>
+        </x-ui.panel>
+
+        <p class="mt-3 font-cond text-xs tracking-wide text-bone-dim uppercase">
+            A team can only be deleted once it's empty. The short tag is set automatically from the name.
+        </p>
     </div>
 
     {{-- Department management --}}

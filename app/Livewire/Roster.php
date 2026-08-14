@@ -59,8 +59,22 @@ class Roster extends Component
     #[Validate('required|string|max:255')]
     public string $deptName = '';
 
+    // ------------------------------------------------------------- team form
+
+    public bool $showTeamForm = false;
+
+    public ?int $editingTeamId = null;
+
+    #[Validate('required|string|max:255')]
+    public string $teamName = '';
+
     public function mount(): void
     {
+        // Defence in depth: the route is admin-only, but a Livewire component
+        // that mutates the roster shouldn't rely on that alone. No method is
+        // reachable without a successful mount.
+        abort_unless(auth()->user()?->isAdmin(), 403);
+
         $this->heights = User::participants()
             ->pluck('height_cm', 'id')
             ->map(fn (?int $cm) => $cm ? (string) $cm : '')
@@ -278,11 +292,96 @@ class Roster extends Component
         }
     }
 
+    // ------------------------------------------------------------------ teams
+
+    public function newTeam(): void
+    {
+        $this->reset(['editingTeamId', 'teamName']);
+        $this->resetValidation();
+        $this->showTeamForm = true;
+    }
+
+    public function editTeam(int $teamId): void
+    {
+        $team = Team::findOrFail($teamId);
+
+        $this->editingTeamId = $team->id;
+        $this->teamName = $team->name;
+        $this->showTeamForm = true;
+    }
+
+    public function saveTeam(): void
+    {
+        $this->validateOnly('teamName');
+
+        $name = trim($this->teamName);
+
+        if ($this->editingTeamId) {
+            $team = Team::findOrFail($this->editingTeamId);
+            // Re-derive the code so a renamed team's tag stays sensible, keeping
+            // its own current code out of the collision check.
+            $team->update(['name' => $name, 'code' => Team::codeFor($name, $team->id)]);
+            $this->flash = 'Team renamed.';
+        } else {
+            Team::create([
+                'name' => $name,
+                'code' => Team::codeFor($name),
+                'sort_order' => (int) Team::max('sort_order') + 1,
+            ]);
+            $this->flash = 'Team added.';
+        }
+
+        $this->reset(['editingTeamId', 'teamName']);
+        $this->showTeamForm = false;
+    }
+
+    /** Refused while anyone is still on it — deleting would silently unassign them. */
+    public function deleteTeam(int $teamId): void
+    {
+        $team = Team::withCount('members')->findOrFail($teamId);
+
+        if ($team->members_count > 0) {
+            $this->flash = "{$team->name} still has {$team->members_count} members. Move them first.";
+
+            return;
+        }
+
+        $name = $team->name;
+        $team->delete();
+
+        $this->flash = "Deleted {$name}.";
+    }
+
+    public function moveTeam(int $teamId, int $direction): void
+    {
+        $ordered = Team::orderBy('sort_order')->orderBy('name')->get()->values();
+        $index = $ordered->search(fn (Team $t) => $t->id === $teamId);
+
+        if ($index === false) {
+            return;
+        }
+
+        $target = $index + $direction;
+
+        if ($target < 0 || $target >= $ordered->count()) {
+            return;
+        }
+
+        $list = $ordered->all();
+        [$list[$index], $list[$target]] = [$list[$target], $list[$index]];
+
+        foreach ($list as $position => $team) {
+            $team->update(['sort_order' => $position]);
+        }
+    }
+
     // ------------------------------------------------------- existing actions
 
-    public function setTeam(int $userId, ?int $teamId): void
+    public function setTeam(int $userId, mixed $teamId = null): void
     {
         $user = User::findOrFail($userId);
+        // The dropdown sends '' for unassigned; normalise to null.
+        $teamId = $teamId !== '' && $teamId !== null ? (int) $teamId : null;
         $user->update(['team_id' => $teamId]);
 
         $this->flash = "{$user->name} moved to ".($teamId ? $user->fresh()->team->name : 'unassigned').'.';
@@ -328,7 +427,13 @@ class Roster extends Component
             ->orderBy('name')
             ->get();
 
-        $teams = Team::orderBy('sort_order')->get();
+        // members_count for the management list; the whole participant count,
+        // not just those loaded above, so the number is honest.
+        $teams = Team::withCount(['members' => fn ($q) => $q->where('is_participant', true)])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
         $everyone = $departments->flatMap->staff->concat($unassigned);
 
         return view('livewire.roster', [

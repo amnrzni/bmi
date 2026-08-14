@@ -18,11 +18,13 @@ class TeamSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach ([
-            ['code' => 'TAH', 'name' => 'Team TAH', 'sort_order' => 1],
-            ['code' => 'BKN', 'name' => 'Team BKN', 'sort_order' => 2],
-        ] as $attributes) {
-            Team::updateOrCreate(['code' => $attributes['code']], $attributes);
+        // Generic placeholders for a fresh install. The admin renames these on
+        // the roster screen — the names aren't the app's to decide.
+        for ($i = 1; $i <= 8; $i++) {
+            Team::updateOrCreate(
+                ['code' => 'TM'.$i],
+                ['name' => 'Team '.$i, 'sort_order' => $i],
+            );
         }
     }
 }

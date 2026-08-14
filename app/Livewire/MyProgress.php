@@ -30,11 +30,31 @@ class MyProgress extends Component
         $series = $progress->series($user);
         $changes = $progress->weekOverWeek($user);
 
-        // Team context, kept gentle: their team's overall figure, no individual
-        // standing within it.
-        $teamStanding = $user->team
-            ? $progress->teamStanding(Team::find($user->team_id))
-            : null;
+        // Team context, kept gentle: their team's overall figure and where the
+        // team sits — never the person's own standing within it.
+        $teamStanding = null;
+        $teamRank = null;
+        $teamCount = null;
+
+        if ($user->team) {
+            $teams = Team::all();
+            $teamCount = $teams->count();
+
+            $standings = $teams
+                ->map(fn (Team $team) => $progress->teamStanding($team))
+                ->sortBy([
+                    fn ($s) => $s->hasData() ? 0 : 1,
+                    fn ($s) => $s->averagePercentChange ?? INF,
+                ])
+                ->values();
+
+            $teamStanding = $standings->firstWhere(fn ($s) => $s->team->id === $user->team_id);
+
+            // Only meaningful once the team actually has a figure to rank on.
+            if ($teamStanding?->hasData()) {
+                $teamRank = $standings->search(fn ($s) => $s->team->id === $user->team_id) + 1;
+            }
+        }
 
         return view('livewire.my-progress', [
             'summary' => $summary,
@@ -42,6 +62,8 @@ class MyProgress extends Component
             'changes' => $changes,
             'category' => BmiCategory::forBmi($summary->currentBmi),
             'teamStanding' => $teamStanding,
+            'teamRank' => $teamRank,
+            'teamCount' => $teamCount,
             // Their own attendance only — a count, never a rank against anyone.
             'attendance' => $participation->forUser($user),
             'myEvents' => EventResponse::with('event')

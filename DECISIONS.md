@@ -12,7 +12,7 @@ decisions made after the handoff was written. Last updated: 2026-08-12.
 | Filament for admin/master-data CRUD | **No Filament.** Everything custom Livewire. |
 | Copy in Malay slang (§6) | **English** — see open question Q2 |
 | Malay UI labels (`Markas`, `Sesi Timbang`, `Analitik`) | English equivalents |
-| Team A / Team B | **Team TAH** and **Team BKN** |
+| Team A / Team B (two fixed teams) | **N admin-managed teams** (~8), ranked — see §11 |
 | Ranking metric unresolved (§7, §9.1) | **Resolved: % change from baseline** |
 | Compliance grid — decide during build (§5.7) | **Resolved: toggle on the weekly grid** |
 | Event attendance → scoring, undecided (§9.6) | **Resolved: attendance feeds score** — mechanism TBD, see Q3 |
@@ -116,6 +116,29 @@ staff's read-only view of their own latest weigh-in**.
 - **Seeder with realistic fake data** so the app can be demoed before real data lands.
 
 ---
+
+## 11. Teams: from two fixed to N managed (supersedes the TAH/BKN framing)
+
+Changed after launch, on the office's call. The original design used **two mixed teams (TAH vs BKN),
+deliberately un-ranked**, so nobody had a natural in-group and there was no us-vs-them — see §7 and
+HANDOFF §7. That reasoning no longer applies:
+
+- **Teams are now an admin-managed set** (~8), created and named on the roster screen like
+  departments. No code deploy to change them.
+- **Standings are a ranked leaderboard** on the home page — best average % change from baseline on
+  top. This is explicitly a competition between named teams now, not two anonymous halves.
+- Team assignment is a **dropdown** per person; the analytics filter is a dropdown too.
+- Balance is judged as a **per-team headcount + avg-BMI list**, flagging lopsided teams, rather than
+  the old two-team difference bar.
+- The short team tag (`code`, shown in the weekly grid) is **auto-derived from the name** — the admin
+  only types names.
+
+The scoring itself is unchanged: still average % change from baseline per team, still excludes members
+below `min_records_team`. Only the count of teams and the presentation changed.
+
+**Consequence to keep in mind:** a visible leaderboard raises the shaming risk §7 warned about, now at
+team level. Kept in check by ranking *teams*, never individuals, and by the individual view still
+showing no personal rank.
 
 ## 10. Resolved since
 

@@ -68,16 +68,19 @@
                         <span class="pl-1 font-cond text-[11px] text-bone-dim">CM</span>
                     </div>
 
-                    <div class="col-span-2 flex overflow-hidden border border-ink-3 sm:col-span-1">
-                        @foreach ($teams as $team)
-                            <button type="button"
-                                    wire:click="setTeam({{ $person->id }}, {{ $team->id }})"
-                                    @class([
-                                        'flex-1 cursor-pointer border-none py-1.5 font-display text-sm font-semibold transition',
-                                        'bg-gold text-ink' => $person->team_id === $team->id,
-                                        'bg-ink text-bone-dim hover:text-bone' => $person->team_id !== $team->id,
-                                    ])>{{ $team->code }}</button>
-                        @endforeach
+                    {{-- Dropdown rather than a button per team: with ~8 teams a
+                         toggle row would never fit a phone. --}}
+                    <div class="col-span-2 sm:col-span-1">
+                        <select wire:change="setTeam({{ $person->id }}, $event.target.value)"
+                                aria-label="Team for {{ $person->name }}"
+                                class="w-full border border-ink-3 bg-ink px-2 py-2 font-cond text-sm text-bone outline-none focus:border-gold">
+                            <option value="" @selected(! $person->team_id)>— team —</option>
+                            @foreach ($teams as $team)
+                                <option value="{{ $team->id }}" @selected($person->team_id === $team->id)>
+                                    {{ $team->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 

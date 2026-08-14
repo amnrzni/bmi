@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\Team;
 use App\Services\RosterImporter;
 use App\Support\ImportRow;
 use Illuminate\Support\Collection;
@@ -89,9 +90,15 @@ class RosterImport extends Component
             // BOM so Excel opens the accented/Malay names in the right encoding.
             fwrite($handle, "\xEF\xBB\xBF");
 
+            // Use real team names so the sample never references a team that
+            // doesn't exist; fall back to a placeholder before any are created.
+            $teams = Team::orderBy('sort_order')->pluck('name');
+            $teamA = $teams->first() ?? 'Team 1';
+            $teamB = $teams->get(1) ?? $teamA;
+
             fputcsv($handle, ['name', 'email', 'department', 'team', 'height', 'joined']);
-            fputcsv($handle, ['Along', 'along@qcxis.com', 'Operations', 'TAH', '172', '2026-08-10']);
-            fputcsv($handle, ['Kuale', 'kuale@qcxis.com', 'Operations', 'BKN', '165', '']);
+            fputcsv($handle, ['Along', 'along@qcxis.com', 'Operations', $teamA, '172', '2026-08-10']);
+            fputcsv($handle, ['Kuale', 'kuale@qcxis.com', 'Operations', $teamB, '165', '']);
 
             fclose($handle);
         }, 'roster-template.csv', ['Content-Type' => 'text/csv']);
