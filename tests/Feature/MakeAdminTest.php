@@ -78,3 +78,23 @@ it('reports the stored row, not an unhydrated new model', function () {
         ->expectsOutputToContain('Competing:          yes')
         ->assertSuccessful();
 });
+
+it('lists the roster with sign-in status', function () {
+    User::factory()->create(['name' => 'Signed In', 'email' => 'in@qcxis.com', 'last_login_at' => now()]);
+    User::factory()->create(['name' => 'Never In', 'email' => 'never@qcxis.com']);
+
+    $this->artisan('challenge:roster')
+        ->expectsOutputToContain('in@qcxis.com')
+        ->expectsOutputToContain('never')
+        ->assertSuccessful();
+});
+
+it('can list only the people who have never signed in', function () {
+    User::factory()->create(['name' => 'Signed In', 'email' => 'in@qcxis.com', 'last_login_at' => now()]);
+    User::factory()->create(['name' => 'Never In', 'email' => 'never@qcxis.com']);
+
+    $this->artisan('challenge:roster', ['--missing' => true])
+        ->expectsOutputToContain('never@qcxis.com')
+        ->doesntExpectOutputToContain('in@qcxis.com')
+        ->assertSuccessful();
+});
