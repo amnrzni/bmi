@@ -32,9 +32,29 @@ mention the cause.
 
 ## 3. Site setup
 
-- **Document root must point at `/public`**, not the project root. Getting this wrong exposes `.env`
-  over HTTP.
+- **Document root must point at `/public`** (aaPanel: "Running directory" → `/public`), not the
+  project root. Getting this wrong exposes `.env` over HTTP.
 - Enable HTTPS. The app sets no `SESSION_SECURE_COOKIE` by default, so add it (step 5) once TLS works.
+
+### nginx rewrite — the app is blank without it
+
+aaPanel's default nginx template assumes a static site: any URL that isn't a real file on disk gets a
+404 from nginx before Laravel is ever called. Two symptoms come from this one cause:
+
+- every path except `/` returns 404 (`/login`, `/roster`, …)
+- the page loads but no button works, with `livewire.js … 404` in the browser console
+
+In **Website → Settings → URL Rewrite**, choose the **laravel** template, or paste:
+
+```nginx
+location / {
+    try_files $uri $uri/ /index.php?$query_string;
+}
+```
+
+Livewire's JavaScript is published to a real static file at `public/vendor/livewire/livewire.js`
+(step 8 does this), so the default `.js` rule serves it fine — no special Livewire location needed.
+Behind Cloudflare, hard-refresh (Cmd/Ctrl+Shift+R) after any nginx change, since a cached 404 sticks.
 
 ## 4. Database
 
@@ -108,7 +128,12 @@ composer install --no-dev --optimize-autoloader
 php artisan key:generate          # only if APP_KEY is empty
 php artisan migrate --force
 php artisan db:seed --class=TeamSeeder --force
+php artisan vendor:publish --tag=livewire:assets --force   # static livewire.js
 ```
+
+The zip already contains the published Livewire assets, so that last line only matters if you deploy
+by pulling from git or after upgrading Livewire. Re-run it whenever `composer update` touches
+Livewire.
 
 **Only `TeamSeeder` is safe in production.** `DatabaseSeeder` creates ~37 fictional staff and a
 10-week weigh-in history. `TeamSeeder` creates only TAH and BKN, which must exist before anyone can
