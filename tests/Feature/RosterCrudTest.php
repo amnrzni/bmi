@@ -9,6 +9,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\WeighIn;
 use App\Services\ProgressService;
+use App\Services\RosterImporter;
 use App\Support\ChallengeWeek;
 use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
@@ -327,4 +328,26 @@ it('tells the weigh-in screen there is nobody to weigh', function () {
     Livewire::actingAs($this->admin)
         ->test(WeighInSession::class)
         ->assertSee('Nobody on the roster yet');
+});
+
+it('offers a downloadable csv template', function () {
+    $component = Livewire::actingAs($this->admin)
+        ->test(RosterImport::class)
+        ->call('downloadTemplate');
+
+    expect($component->effects['download'] ?? null)->not->toBeNull();
+});
+
+it('template rows round-trip cleanly back through the importer', function () {
+    // The template names team BKN, which must exist for the round trip to pass —
+    // this catches a template that references a team the app doesn't have.
+    Team::factory()->create(['code' => 'BKN', 'name' => 'Team BKN', 'sort_order' => 2]);
+
+    $csv = "\xEF\xBB\xBFname,email,department,team,height,joined\n"
+        ."Along,along@qcxis.com,Operations,TAH,172,2026-08-10\n"
+        ."Kuale,kuale@qcxis.com,Operations,BKN,165,\n";
+
+    $rows = app(RosterImporter::class)->parse($csv);
+
+    expect($rows->every(fn ($r) => ! $r->isError()))->toBeTrue();
 });

@@ -9,6 +9,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Bulk roster load from a CSV.
@@ -73,6 +74,27 @@ class RosterImport extends Component
 
             return $this->parsed = collect();
         }
+    }
+
+    /**
+     * A starter file with the exact headers the importer expects and two
+     * example rows, so filling it in is a matter of overwriting rather than
+     * guessing at column names.
+     */
+    public function downloadTemplate(): StreamedResponse
+    {
+        return response()->streamDownload(function () {
+            $handle = fopen('php://output', 'w');
+
+            // BOM so Excel opens the accented/Malay names in the right encoding.
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            fputcsv($handle, ['name', 'email', 'department', 'team', 'height', 'joined']);
+            fputcsv($handle, ['Along', 'along@qcxis.com', 'Operations', 'TAH', '172', '2026-08-10']);
+            fputcsv($handle, ['Kuale', 'kuale@qcxis.com', 'Operations', 'BKN', '165', '']);
+
+            fclose($handle);
+        }, 'roster-template.csv', ['Content-Type' => 'text/csv']);
     }
 
     public function commit(RosterImporter $importer): void

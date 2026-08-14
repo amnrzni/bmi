@@ -313,15 +313,27 @@ it('hides the setup hint from real users when debug is off', function () {
     $this->get(route('login'))
         ->assertOk()
         ->assertDontSee('QCXIS_CLIENT_ID')
-        ->assertSee("Staff sign-in isn't available yet", false);
+        ->assertSee("Sign-in isn't available yet", false);
 });
 
-it('offers the qcxis button and the admin fallback together once configured', function () {
+it('shows only the qcxis button once configured', function () {
+    // The email/password form was removed from the page by request; the button
+    // is the only thing on it now.
     $this->get(route('login'))
         ->assertOk()
         ->assertSee('Sign in with QCXIS')
-        ->assertSee('or admin sign-in')
-        ->assertSee('Password');
+        ->assertDontSee('Password')
+        ->assertDontSee('name="password"', false);
+});
+
+it('keeps the admin fallback login working even though the form is hidden', function () {
+    // The POST route survives so an SSO outage can't lock every admin out.
+    $admin = User::factory()->admin()->create(['email' => 'boss@qcxis.com']);
+
+    $this->post(route('login'), ['email' => 'boss@qcxis.com', 'password' => 'password'])
+        ->assertRedirect(route('home'));
+
+    $this->assertAuthenticatedAs($admin);
 });
 
 // ------------------------------------------------------- public client mode

@@ -30,11 +30,21 @@
         @error('file') <p class="mt-2 font-cond text-sm text-blood-bright">{{ $message }}</p> @enderror
 
         <div class="mt-5 font-cond text-xs tracking-wide text-bone-dim uppercase">
-            <p>In Google Sheets: <b class="text-bone">File → Download → Comma-separated values</b></p>
-            <p class="mt-1">
+            <p>
+                <button type="button" wire:click="downloadTemplate"
+                        class="cursor-pointer text-gold underline hover:text-gold-bright">
+                    Download the template ↓
+                </button>
+                — fill it in, then upload it back here.
+            </p>
+            <p class="mt-2">
                 Needs a header row with at least <b class="text-gold">name</b> and
                 <b class="text-gold">email</b>. Optional: department, team, height, joined.
                 Malay headings work too (nama, emel, jabatan, pasukan, tinggi).
+            </p>
+            <p class="mt-1">
+                Editing your own sheet instead? In Google Sheets:
+                <b class="text-bone">File → Download → Comma-separated values</b>.
             </p>
         </div>
     </x-ui.panel>

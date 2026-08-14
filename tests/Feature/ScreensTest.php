@@ -197,12 +197,12 @@ it('fails loudly on an unrecognised sso driver rather than silently falling back
         ->toThrow(InvalidArgumentException::class);
 });
 
-it('tells staff why sign-in is unavailable instead of just hiding the button', function () {
+it('says so plainly when sign-in is unavailable', function () {
     $this->app->detectEnvironment(fn () => 'production');
 
     $this->get(route('login'))
         ->assertOk()
-        ->assertSee("Staff sign-in isn't available yet", false);
+        ->assertSee("Sign-in isn't available yet", false);
 });
 
 it('anonymises and exits someone who withdraws', function () {
