@@ -183,6 +183,65 @@ it('deletes a row added by mistake', function () {
     expect(User::find($person->id))->toBeNull();
 });
 
+// -------------------------------------------------------------- admin toggle
+
+it('promotes a staff member to admin', function () {
+    $person = User::factory()->create();
+
+    Livewire::actingAs($this->admin)->test(Roster::class)->call('toggleAdmin', $person->id);
+
+    expect($person->fresh()->isAdmin())->toBeTrue();
+});
+
+it('demotes an admin back to staff', function () {
+    $other = User::factory()->admin()->create();
+
+    Livewire::actingAs($this->admin)->test(Roster::class)->call('toggleAdmin', $other->id);
+
+    expect($other->fresh()->isAdmin())->toBeFalse();
+});
+
+it('refuses to let an admin remove their own access', function () {
+    // Every admin can promote/demote others — but not lock themselves out.
+    User::factory()->admin()->create(); // a second admin, so "last admin" isn't the reason
+
+    $component = Livewire::actingAs($this->admin)->test(Roster::class)->call('toggleAdmin', $this->admin->id);
+
+    expect($this->admin->fresh()->isAdmin())->toBeTrue()
+        ->and($component->get('flash'))->toContain("can't remove your own");
+});
+
+it('refuses the sole admin trying to demote themselves', function () {
+    // The only way to reach this screen is to already be an admin, so if the
+    // admin count is ever 1, that admin can only be the person acting — the
+    // self-guard and the last-admin guard describe the same real situation.
+    expect(User::admins()->count())->toBe(1);
+
+    Livewire::actingAs($this->admin)->test(Roster::class)->call('toggleAdmin', $this->admin->id);
+
+    expect($this->admin->fresh()->isAdmin())->toBeTrue();
+});
+
+it('allows demoting a second admin even though it leaves exactly one', function () {
+    // Reducing TO one admin is fine — the guard only stops going to zero.
+    $second = User::factory()->admin()->create();
+    expect(User::admins()->count())->toBe(2);
+
+    Livewire::actingAs($this->admin)->test(Roster::class)->call('toggleAdmin', $second->id);
+
+    expect($second->fresh()->isAdmin())->toBeFalse()
+        ->and(User::admins()->count())->toBe(1);
+});
+
+it('shows who is an admin on the roster', function () {
+    $person = User::factory()->admin()->create(['name' => 'Second Admin']);
+
+    Livewire::actingAs($this->admin)
+        ->test(Roster::class)
+        ->assertSee('Second Admin')
+        ->assertSee('Admin');
+});
+
 // -------------------------------------------------------------- departments
 
 it('adds and renames a department', function () {

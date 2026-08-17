@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\Role;
 use App\Models\Department;
 use App\Models\Team;
 use App\Models\User;
@@ -202,6 +203,37 @@ class Roster extends Component
         $user->delete();
 
         $this->flash = "Deleted {$name}.";
+    }
+
+    /**
+     * Grants or removes admin. Every admin already has full power over the
+     * roster (edit weights, manage teams, see everyone's data — HANDOFF §4's
+     * accepted PIC-into-admin trade-off), so letting any admin promote another
+     * isn't a new tier of trust. Two rails stop the obvious footguns:
+     * demoting yourself, and demoting the last admin standing.
+     */
+    public function toggleAdmin(int $userId): void
+    {
+        $user = User::findOrFail($userId);
+        $promoting = ! $user->isAdmin();
+
+        if (! $promoting) {
+            if ($user->id === auth()->id()) {
+                $this->flash = "You can't remove your own admin access.";
+
+                return;
+            }
+
+            if (User::admins()->count() <= 1) {
+                $this->flash = 'At least one admin has to remain.';
+
+                return;
+            }
+        }
+
+        $user->update(['role' => $promoting ? Role::Admin : Role::Staff]);
+
+        $this->flash = $promoting ? "{$user->name} is now an admin." : "{$user->name} is no longer an admin.";
     }
 
     private function resetStaffForm(): void
@@ -445,6 +477,9 @@ class Roster extends Component
             'neverSignedIn' => $everyone->filter->hasNeverSignedIn()->count(),
             'leftCount' => $everyone->filter->hasLeft()->count(),
             'headcount' => $everyone->count(),
+            // The true system-wide count, not just participants shown on this
+            // page — a non-participant admin still counts toward "last admin".
+            'adminCount' => User::admins()->count(),
         ]);
     }
 

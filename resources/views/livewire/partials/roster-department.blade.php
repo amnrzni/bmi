@@ -34,6 +34,11 @@
                     <div class="min-w-0">
                         <div class="truncate font-cond text-base text-bone">
                             {{ $person->name }}
+                            @if ($person->isAdmin())
+                                <span class="ml-1 rounded-sm bg-gold/20 px-1.5 py-0.5 align-middle font-cond text-[10px] font-semibold tracking-wide-cond text-gold-bright uppercase">
+                                    Admin
+                                </span>
+                            @endif
                             @if ($person->hasLeft())
                                 <span class="ml-1 font-cond text-[11px] tracking-wide-cond text-bone-dim uppercase">
                                     · left {{ $person->left_at->format('j M') }}
@@ -87,6 +92,30 @@
                 <div class="mt-2 flex flex-wrap gap-4 font-cond text-[11px] tracking-wide-cond uppercase">
                     <button type="button" wire:click="editStaff({{ $person->id }})"
                             class="cursor-pointer text-bone-dim hover:text-gold">Edit</button>
+
+                    @php
+                        $isSelf = $person->id === auth()->id();
+                        // Only relevant when demoting — never blocks a promotion.
+                        $lastAdmin = $person->isAdmin() && $adminCount <= 1;
+                    @endphp
+
+                    @if ($isSelf && $person->isAdmin())
+                        <span class="text-bone-dim/50" title="You can't remove your own admin access">
+                            Admin
+                        </span>
+                    @elseif ($lastAdmin)
+                        <span class="text-bone-dim/50" title="At least one admin has to remain">
+                            Admin
+                        </span>
+                    @else
+                        <button type="button" wire:click="toggleAdmin({{ $person->id }})"
+                                @if ($person->isAdmin())
+                                    wire:confirm="Remove {{ $person->name }}'s admin access?"
+                                @endif
+                                class="cursor-pointer text-bone-dim hover:text-gold">
+                            {{ $person->isAdmin() ? 'Remove admin' : 'Make admin' }}
+                        </button>
+                    @endif
 
                     @if ($person->hasLeft())
                         <button type="button" wire:click="restoreStaff({{ $person->id }})"
