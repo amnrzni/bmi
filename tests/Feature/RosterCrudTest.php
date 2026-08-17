@@ -116,6 +116,32 @@ it('edits someone and recalculates their bmi history when the height changes', f
     expect((float) $weighIn->fresh()->bmi)->toBe(30.86);
 });
 
+it('assigns a department to someone added without one', function () {
+    // Editing them once landed in the very-long-page position: the "No
+    // department" group at the bottom of the roster.
+    $person = User::factory()->create(['department_id' => null]);
+
+    Livewire::actingAs($this->admin)
+        ->test(Roster::class)
+        ->call('editStaff', $person->id)
+        ->set('staffDepartmentId', $this->department->id)
+        ->call('saveStaff')
+        ->assertHasNoErrors();
+
+    expect($person->fresh()->department_id)->toBe($this->department->id);
+});
+
+it('scrolls the edit form into view so it is not missed off-screen', function () {
+    // The form renders near the top of the page, but "Edit" is clicked from a
+    // person's row, which for "No department" can be at the very bottom.
+    $person = User::factory()->create(['department_id' => null]);
+
+    Livewire::actingAs($this->admin)
+        ->test(Roster::class)
+        ->call('editStaff', $person->id)
+        ->assertSeeHtml('scrollIntoView');
+});
+
 it('warns when an email changes for someone who has already signed in', function () {
     $person = User::factory()->create([
         'email' => 'old@qcxis.com',

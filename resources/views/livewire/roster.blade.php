@@ -98,7 +98,14 @@
 
     {{-- Add / edit a person --}}
     @if ($showStaffForm)
-        <x-ui.panel class="mb-6">
+        {{--
+            The form renders here, above the department list — but "Edit" is
+            clicked from a person's row, which for someone in "No department"
+            can be at the very bottom of a long page. Without this, the form
+            appears off-screen and clicking Edit looks like it did nothing.
+        --}}
+        <x-ui.panel class="mb-6" x-data
+                    x-init="$nextTick(() => { $el.scrollIntoView({ behavior: 'smooth', block: 'start' }); $el.querySelector('#staffName')?.focus(); })">
             <h2 class="mb-5 font-display text-xl font-bold tracking-wide uppercase">
                 {{ $editingUserId ? 'Edit person' : 'Add person' }}
             </h2>
