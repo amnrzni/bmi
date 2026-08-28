@@ -159,20 +159,18 @@ showing no personal rank.
 
 ## 12. Merdeka corner contest (a separate feature sharing the app)
 
-Judged decoration contest for the 2026 Merdeka corners. It lives in the same app because it needs the
-same identity — SSO, roster, admin — and nothing else.
+Judged decoration contest for the 2026 Merdeka corners. It shares the deployment and the
+`departments` table, and nothing else.
 
-- **Judging panel is its own table** (`merdeka_judges`), not a `Role` case. `role` is single-valued,
-  and a founder on the panel may or may not also be an admin.
-- **Scores hang off `users`, not `merdeka_judges`.** Removing someone from the panel must not delete
-  sheets they already signed.
-- **Judges are seated by typing a name and email**, not picked from the roster — the founders judge the
-  contest without competing in the challenge. The seat opens a `users` row with `is_participant = false`,
-  because SSO can only match an email to a `users` row; that flag keeps them off the roster screen, the
-  teams, the standings and every weigh-in count. An address already on the roster is reused as-is, never
-  flipped to non-participant. Removing a seat deletes the login it opened, unless the person is a roster
-  member, an admin, has signed in, or has filed a sheet — a mistyped address left behind is a working
-  SSO login for whoever owns it.
+- **Judges do not use SSO and are not app users.** The panel is a list of names and emails in
+  `merdeka_judges`; typing a listed address at `/merdeka/masuk` is the whole sign-in. Two founders
+  judging office decorations once did not justify roster rows, consent and QCXIS identities.
+- **The consequence, stated plainly:** the email is the entire credential, so anyone who knows a
+  judge's address can score as them. Accepted for this contest. The sign-in is throttled (10 wrong
+  addresses per IP per 15 min) so the door can't be walked one address at a time.
+- **Scores key on `merdeka_judges`, and a judge who has filed anything can't be removed** — the same
+  rail the roster puts in front of deleting someone with weigh-ins. Removing them would take signed
+  sheets with them and silently move a corner's average.
 - **Locked on submit.** No edit path at all — the judge signs the sheet, so changing it afterwards
   would leave the signature attesting to something else. An admin has no override either.
 - **Malay UI, overriding §2's English rule for these screens only.** The rubric's band descriptions
@@ -181,11 +179,13 @@ same identity — SSO, roster, admin — and nothing else.
 - **Total is computed server-side** from the 1–5 bands on every write, same rule as BMI (§4).
 - **Entrants are `departments` rows**, so the contest needs the real org departments —
   `php artisan merdeka:departments` adds them and reports the placeholders.
-- **Unlisted in the nav.** Judges reach `/merdeka` by link; admins reach `/merdeka/keputusan`.
-  A one-week event doesn't earn a permanent tab for 38 people.
+- **Two doors, deliberately.** `/merdeka` is guest-accessible and held by `merdeka.judge`;
+  `/merdeka/keputusan` is an ordinary admin screen behind app auth. A judge session grants nothing on
+  the admin side and an admin session grants nothing on the judging side.
+- **Unlisted in the nav.** Both are reached by direct link; a one-week event doesn't earn a permanent
+  tab for 38 people.
 - **Admins see partial results live**; judges see only their own sheets, so neither founder can
   anchor on the other's marks.
-- **Outside the consent gate** — judging a decoration has nothing to do with sharing body weight.
 
 ## Still open
 
@@ -194,7 +194,7 @@ same identity — SSO, roster, admin — and nothing else.
 2. **The Google Sheet's columns** — needed before a CSV importer can be written.
 3. **QCXIS SSO protocol and endpoints** — the driver is stubbed until these arrive.
 4. **Challenge end date** — open-ended in config; the grid grows as weeks are recorded.
-5. **Merdeka: the founders' QCXIS emails** — typed straight into the panel form; the login match is on
-   email alone, so a typo reads as "not on the roster" at sign-in.
+5. **Merdeka: the founders' emails** — typed into the panel form on the results screen. Any address
+   works; it is a contest credential, not a QCXIS identity.
 6. **Merdeka: the placeholder departments** — Academic, Operations, Finance, IT Support and Customer
    Service still hold staff and will appear on the judging screen until they are cleared.

@@ -5,7 +5,6 @@ namespace App\Livewire\Merdeka;
 use App\Models\Department;
 use App\Models\MerdekaJudge;
 use App\Models\MerdekaScore;
-use App\Models\User;
 use App\Support\MerdekaRubric;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Layout;
@@ -34,9 +33,8 @@ class Results extends Component
     public string $newJudgeName = '';
 
     /**
-     * The whole identity match. SSO compares what QCXIS returns against
-     * `users.email` and nothing else, so a typo here reads as "not on the
-     * roster" at sign-in, blaming the roster rather than the typo.
+     * The judge's whole credential. They sign in by typing it, so a typo here
+     * doesn't lock them out quietly — it hands the seat to nobody at all.
      */
     #[Validate('required|email|max:255')]
     public string $newJudgeEmail = '';
@@ -56,79 +54,52 @@ class Results extends Component
 
     public function addJudge(): void
     {
+        // Trimmed before validating, for the same reason the sign-in screen
+        // does it: a pasted address carries whitespace.
+        $this->newJudgeName = trim($this->newJudgeName);
+        $this->newJudgeEmail = trim($this->newJudgeEmail);
+        $this->newJudgeTitle = trim($this->newJudgeTitle);
+
         $this->validate();
 
         // Lowercased on write so it can never diverge from the comparison the
-        // SSO callback makes.
-        $email = mb_strtolower(trim($this->newJudgeEmail));
+        // sign-in screen makes.
+        $email = mb_strtolower($this->newJudgeEmail);
 
-        // withTrashed, because the unique index covers soft-deleted rows: a
-        // plain lookup would miss one and the insert would fail as a raw
-        // database error instead of a message.
-        $user = User::withTrashed()->whereRaw('lower(email) = ?', [$email])->first();
-
-        if ($user) {
-            if (MerdekaJudge::where('user_id', $user->id)->exists()) {
-                $this->flash = $user->name.' sudah berada dalam panel.';
-
-                return;
-            }
-
-            // Deliberately keeps whatever the address already is. If it belongs
-            // to a competing staff member, seating them must not quietly strip
-            // them out of the challenge by flipping is_participant.
-            $user->restore();
-        } else {
-            // Judges are not roster members. is_participant = false keeps them
-            // off the roster screen, the teams, the standings and every
-            // weigh-in count — the row exists only because SSO has to match an
-            // email to a users row to sign anyone in at all.
-            $user = User::create([
-                'name' => trim($this->newJudgeName),
-                'email' => $email,
-                'is_participant' => false,
-            ]);
-        }
-
-        MerdekaJudge::create([
-            'user_id' => $user->id,
-            'title' => trim($this->newJudgeTitle) ?: null,
-            'sort_order' => (int) MerdekaJudge::max('sort_order') + 1,
-        ]);
-
-        $this->reset('newJudgeName', 'newJudgeEmail', 'newJudgeTitle');
-        $this->flash = $user->name.' telah ditambah. Mereka boleh log masuk sebaik sahaja QCXIS memulangkan '.$email.' dengan tepat.';
-    }
-
-    public function removeJudge(int $judgeId): void
-    {
-        $judge = MerdekaJudge::with('user')->findOrFail($judgeId);
-        $user = $judge->user;
-        $name = $user?->name ?? 'Hakim';
-
-        // Only the seat goes. Sheets they already filed stay — they were signed,
-        // and the standing was computed with them.
-        $judge->delete();
-
-        // An account that existed only to seat a judge goes with the seat.
-        // Left behind, a mistyped address is a working SSO login for whoever
-        // owns it. Everything else is spared: a roster member, an admin, anyone
-        // who has signed in, and anyone who has filed a sheet.
-        $wasOnlyEverAJudge = $user
-            && ! $user->is_participant
-            && ! $user->isAdmin()
-            && $user->hasNeverSignedIn()
-            && ! MerdekaScore::where('user_id', $user->id)->exists();
-
-        if ($wasOnlyEverAJudge) {
-            $user->delete();
-
-            $this->flash = $name.' telah dikeluarkan dari panel dan akaun log masuk mereka dipadam.';
+        if ($existing = MerdekaJudge::findByEmail($email)) {
+            $this->flash = $existing->name.' sudah berada dalam panel dengan e-mel itu.';
 
             return;
         }
 
-        $this->flash = $name.' telah dikeluarkan dari panel. Markah yang telah dihantar dikekalkan.';
+        MerdekaJudge::create([
+            'name' => $this->newJudgeName,
+            'email' => $email,
+            'title' => $this->newJudgeTitle ?: null,
+            'sort_order' => (int) MerdekaJudge::max('sort_order') + 1,
+        ]);
+
+        $this->reset('newJudgeName', 'newJudgeEmail', 'newJudgeTitle');
+        $this->flash = 'Ditambah. Mereka boleh log masuk di /merdeka dengan '.$email.'.';
+    }
+
+    public function removeJudge(int $judgeId): void
+    {
+        $judge = MerdekaJudge::findOrFail($judgeId);
+
+        // Refused once they have filed anything, the same rail the roster puts
+        // in front of deleting someone with weigh-ins: removing them would take
+        // signed sheets with them and silently move a corner's average.
+        if ($judge->scores()->exists()) {
+            $this->flash = $judge->name.' telah menghantar markah, jadi mereka tidak boleh dikeluarkan.';
+
+            return;
+        }
+
+        $name = $judge->name;
+        $judge->delete();
+
+        $this->flash = $name.' telah dikeluarkan dari panel.';
     }
 
     // -------------------------------------------------------------- one sheet
@@ -147,26 +118,29 @@ class Results extends Component
 
     public function render()
     {
-        $judges = MerdekaJudge::with('user')->orderBy('sort_order')->orderBy('id')->get();
+        $judges = MerdekaJudge::orderBy('sort_order')->orderBy('id')->get();
         $departments = Department::orderBy('sort_order')->orderBy('name')->get();
-        // Department eager-loaded for the detail view; shouldBeStrict is on.
-        $scores = MerdekaScore::with(['user', 'department'])->get();
+        // Judge and department eager-loaded for the detail view; shouldBeStrict
+        // is on outside production.
+        $scores = MerdekaScore::with(['judge', 'department'])->get();
 
         /** @var Collection<int, Collection<int, MerdekaScore>> $byDepartment */
         $byDepartment = $scores->groupBy('department_id');
 
-        // The standing is the mean of every sheet filed for a corner, not just
-        // those from the current panel — a sheet counted the day it was signed
-        // shouldn't drop out because someone later left the panel.
         $rows = $departments->map(function (Department $department) use ($byDepartment, $judges) {
             $filed = $byDepartment->get($department->id, collect());
-            $panelIds = $judges->pluck('user_id');
 
             return [
                 'department' => $department,
-                'filed' => $filed->sortBy(fn (MerdekaScore $s) => $panelIds->search($s->user_id) === false ? PHP_INT_MAX : $panelIds->search($s->user_id))->values(),
-                'missing' => $judges->reject(fn (MerdekaJudge $j) => $filed->contains('user_id', $j->user_id))->values(),
-                'average' => $filed->isEmpty() ? null : round($filed->sum(fn (MerdekaScore $s) => (float) $s->total) / $filed->count(), 2),
+                'filed' => $filed->sortBy(fn (MerdekaScore $score) => $judges->search(
+                    fn (MerdekaJudge $judge) => $judge->id === $score->merdeka_judge_id
+                ))->values(),
+                'missing' => $judges->reject(
+                    fn (MerdekaJudge $judge) => $filed->contains('merdeka_judge_id', $judge->id)
+                )->values(),
+                'average' => $filed->isEmpty()
+                    ? null
+                    : round($filed->sum(fn (MerdekaScore $score) => (float) $score->total) / $filed->count(), 2),
             ];
         });
 
@@ -180,11 +154,11 @@ class Results extends Component
             'ranked' => $ranked,
             'expected' => $departments->count() * $judges->count(),
             'filedCount' => $scores->count(),
-            'departmentsComplete' => $rows->filter(fn (array $row) => $judges->isNotEmpty() && $row['missing']->isEmpty())->count(),
+            'departmentsComplete' => $rows->filter(
+                fn (array $row) => $judges->isNotEmpty() && $row['missing']->isEmpty()
+            )->count(),
             'departmentCount' => $departments->count(),
-            'openScore' => $this->openScoreId
-                ? $scores->firstWhere('id', $this->openScoreId)
-                : null,
+            'openScore' => $this->openScoreId ? $scores->firstWhere('id', $this->openScoreId) : null,
             'criteria' => MerdekaRubric::CRITERIA,
             'scaleLabels' => MerdekaRubric::SCALE_LABELS,
         ]);

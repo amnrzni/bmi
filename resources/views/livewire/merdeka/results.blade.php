@@ -22,7 +22,7 @@
             <div class="font-cond text-[13px] tracking-label text-merdeka-red-soft uppercase">
                 {{ $openScore->department?->name }}
             </div>
-            <h2 class="mt-1 font-display text-2xl font-bold uppercase">{{ $openScore->user?->name ?? 'Hakim' }}</h2>
+            <h2 class="mt-1 font-display text-2xl font-bold uppercase">{{ $openScore->judge?->name ?? 'Hakim' }}</h2>
             <p class="mt-1 mb-6 font-cond text-sm text-merdeka-muted">
                 Dihantar pada {{ $openScore->submitted_at->timezone(config('app.timezone'))->format('j M Y, g:ia') }}
             </p>
@@ -55,7 +55,7 @@
             <div class="mt-5">
                 <span class="{{ $labelClass }}">Tandatangan</span>
                 <div class="bg-merdeka-cream p-2">
-                    <img src="{{ $openScore->signature }}" alt="Tandatangan {{ $openScore->user?->name }}" class="block w-full">
+                    <img src="{{ $openScore->signature }}" alt="Tandatangan {{ $openScore->judge?->name }}" class="block w-full">
                 </div>
             </div>
         </div>
@@ -109,18 +109,12 @@
                     </div>
 
                     @foreach ($row['filed'] as $score)
-                        @php $offPanel = ! $judges->contains('user_id', $score->user_id); @endphp
                         <button type="button" wire:click="openScore({{ $score->id }})"
                                 wire:key="score-{{ $score->id }}"
                                 class="mt-2 flex w-full cursor-pointer items-center justify-between gap-3 border border-merdeka-red/25 bg-merdeka-ink px-3 py-2.5 text-left transition hover:border-merdeka-red">
                             <span class="min-w-0">
-                                <span class="block truncate font-cond text-sm">{{ $score->user?->name ?? 'Hakim' }}</span>
-                                <span class="block font-cond text-[13px] text-merdeka-good">
-                                    Sudah dinilai
-                                    @if ($offPanel)
-                                        <span class="text-merdeka-muted">· bukan lagi ahli panel</span>
-                                    @endif
-                                </span>
+                                <span class="block truncate font-cond text-sm">{{ $score->judge?->name ?? 'Hakim' }}</span>
+                                <span class="block font-cond text-[13px] text-merdeka-good">Sudah dinilai</span>
                             </span>
                             <span class="shrink-0 font-display text-base text-merdeka-red-soft">{{ $trim($score->total) }}</span>
                         </button>
@@ -130,7 +124,7 @@
                         <div wire:key="missing-{{ $row['department']->id }}-{{ $judge->id }}"
                              class="mt-2 flex items-center justify-between gap-3 border border-merdeka-red/25 bg-merdeka-ink px-3 py-2.5 opacity-60">
                             <span class="min-w-0">
-                                <span class="block truncate font-cond text-sm">{{ $judge->user?->name ?? 'Hakim' }}</span>
+                                <span class="block truncate font-cond text-sm">{{ $judge->name }}</span>
                                 <span class="block font-cond text-[13px] text-merdeka-muted">Belum dinilai</span>
                             </span>
                             <span class="shrink-0 font-display text-base text-merdeka-muted">—</span>
@@ -148,23 +142,22 @@
         <div class="{{ $panelClass }} mt-6 p-5">
             <h2 class="mb-1 font-display text-lg font-bold tracking-wide uppercase">Panel Hakim</h2>
             <p class="mb-4 font-cond text-[13px] leading-relaxed text-merdeka-muted">
-                Hanya nama dalam senarai ini boleh membuka borang markah. Hakim tidak perlu berada dalam
-                roster cabaran — masukkan e-mel QCXIS mereka di bawah dan akaun log masuk akan dibuka
-                untuk pertandingan ini sahaja. Padanan log masuk dibuat pada e-mel sahaja, jadi ejaan
-                mesti tepat.
+                Hakim log masuk di <b class="text-merdeka-red-soft">/merdeka</b> dengan menaip e-mel
+                sahaja — tiada kata laluan. Hanya e-mel dalam senarai ini diterima, jadi ejaan mesti
+                tepat. Hakim yang telah menghantar markah tidak boleh dikeluarkan.
             </p>
 
             @forelse ($judges as $judge)
                 <div wire:key="judge-{{ $judge->id }}"
                      class="mb-2 flex items-center justify-between gap-3 border border-merdeka-red/25 bg-merdeka-ink px-3 py-2.5">
                     <span class="min-w-0">
-                        <span class="block truncate font-cond text-sm font-semibold">{{ $judge->user?->name ?? '—' }}</span>
+                        <span class="block truncate font-cond text-sm font-semibold">{{ $judge->name }}</span>
                         <span class="block truncate font-cond text-[13px] text-merdeka-muted">
-                            {{ $judge->title ?: 'Panel Hakim' }} · {{ $judge->user?->email }}
+                            {{ $judge->label() }} · {{ $judge->email }}
                         </span>
                     </span>
                     <button type="button" wire:click="removeJudge({{ $judge->id }})"
-                            wire:confirm="Keluarkan {{ $judge->user?->name }} dari panel? Markah yang telah dihantar akan dikekalkan."
+                            wire:confirm="Keluarkan {{ $judge->name }} dari panel?"
                             class="shrink-0 cursor-pointer border border-merdeka-red/50 px-3 py-1.5 font-cond text-[13px] tracking-wide text-merdeka-red-soft uppercase transition hover:bg-merdeka-red hover:text-white">
                         Keluarkan
                     </button>
@@ -193,7 +186,7 @@
             </div>
 
             <div class="mt-3">
-                <label for="newJudgeEmail" class="{{ $labelClass }}">E-mel QCXIS</label>
+                <label for="newJudgeEmail" class="{{ $labelClass }}">E-mel (kata laluan log masuk)</label>
                 <input id="newJudgeEmail" type="email" wire:model="newJudgeEmail" placeholder="nama@qcxis.com"
                        autocapitalize="off" autocorrect="off" spellcheck="false"
                        class="{{ $judgeInputClass }}">
@@ -206,4 +199,19 @@
             </button>
         </div>
     @endif
+
+    {{-- The layout carries no sign-out: judges and admins get in different ways. --}}
+    <div class="mt-8 flex items-center justify-between gap-4">
+        <a href="{{ route('home') }}"
+           class="font-cond text-[13px] tracking-wide text-merdeka-muted uppercase transition hover:text-merdeka-red-soft">
+            ‹ BMI Challenge
+        </a>
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit"
+                    class="cursor-pointer font-cond text-[13px] tracking-wide text-merdeka-muted uppercase transition hover:text-merdeka-red-soft">
+                Log Keluar
+            </button>
+        </form>
+    </div>
 </div>

@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -72,17 +71,6 @@ class User extends Authenticatable
         return $this->hasMany(EventAttendance::class);
     }
 
-    /** Their seat on the Merdeka judging panel, if they hold one. */
-    public function merdekaJudge(): HasOne
-    {
-        return $this->hasOne(MerdekaJudge::class);
-    }
-
-    public function merdekaScores(): HasMany
-    {
-        return $this->hasMany(MerdekaScore::class);
-    }
-
     // ------------------------------------------------------------------- scopes
 
     public function scopeParticipants(Builder $query): Builder
@@ -122,15 +110,6 @@ class User extends Authenticatable
     public function hasConsented(): bool
     {
         return $this->consented_at !== null;
-    }
-
-    /**
-     * Sits on the Merdeka contest panel. Independent of role: a judge need not
-     * be an admin, and an admin is not automatically a judge.
-     */
-    public function isMerdekaJudge(): bool
-    {
-        return $this->merdekaJudge()->exists();
     }
 
     /**

@@ -14,7 +14,7 @@
     @if (! $openDepartment)
         <div class="mb-5">
             <div class="mb-3 flex items-baseline justify-between font-cond text-[13px] tracking-wide text-merdeka-muted uppercase">
-                <span>{{ $judge?->title ?: 'Panel Hakim' }} · {{ auth()->user()->name }}</span>
+                <span>{{ $judge->label() }} · {{ $judge->name }}</span>
                 <span>{{ $doneCount }} / {{ $departments->count() }} dinilai</span>
             </div>
             <div class="h-2 border border-merdeka-red/25 bg-merdeka-ink">
@@ -34,7 +34,7 @@
             <div class="{{ $panelClass }} p-10 text-center">
                 <h2 class="font-display text-xl font-bold uppercase">Semua jabatan telah dinilai</h2>
                 <p class="mt-3 font-cond text-sm text-merdeka-muted">
-                    Terima kasih, {{ Str::before(auth()->user()->name, ' ') }}. Penilaian anda untuk
+                    Terima kasih, {{ Str::before($judge->name, ' ') }}. Penilaian anda untuk
                     {{ $departments->count() }} jabatan telah lengkap dan dihantar.
                 </p>
             </div>
@@ -220,6 +220,15 @@
                     {{ $band }} = {{ $label }}@if (! $loop->last) · @endif
                 @endforeach
             </div>
+        </div>
+    @endif
+
+    @if (! $openDepartment)
+        <div class="mt-8 flex justify-end">
+            <button type="button" wire:click="logout"
+                    class="cursor-pointer font-cond text-[13px] tracking-wide text-merdeka-muted uppercase transition hover:text-merdeka-red-soft">
+                Log Keluar
+            </button>
         </div>
     @endif
 </div>

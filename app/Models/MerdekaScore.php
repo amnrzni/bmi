@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A filed scoresheet. Immutable once written — the panel signs it, so changing
+ * A filed scoresheet. Immutable once written — the judge signs it, so changing
  * it afterwards would make the signature attest to something else.
  */
 class MerdekaScore extends Model
@@ -26,9 +26,9 @@ class MerdekaScore extends Model
         ];
     }
 
-    public function user(): BelongsTo
+    public function judge(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(MerdekaJudge::class, 'merdeka_judge_id');
     }
 
     public function department(): BelongsTo

@@ -64,8 +64,8 @@ class AppServiceProvider extends ServiceProvider
         // ranking. Admin-only, via the Gate::before above.
         Gate::define('view-merdeka-results', fn (User $user) => false);
 
-        // Deliberately NOT a gate: `Gate::before` hands admins every ability,
-        // and an admin who isn't on the panel must not be able to file a
-        // signed scoresheet. The judging screen checks isMerdekaJudge() itself.
+        // There is deliberately no ability for judging itself: judges are not
+        // app users at all. They sign in with an email at /merdeka and are held
+        // by the `merdeka.judge` middleware, so no Gate could apply to them.
     }
 }

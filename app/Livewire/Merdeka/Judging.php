@@ -36,11 +36,20 @@ class Judging extends Component
 
     public ?string $flash = null;
 
-    public function mount(): void
+    /**
+     * The signed-in judge. The `merdeka.judge` middleware guarantees one, and
+     * it is re-read per request so a judge removed mid-session stops here.
+     */
+    private function judge(): MerdekaJudge
     {
-        // Not a Gate: Gate::before hands admins every ability, and an admin who
-        // isn't on the panel must not be able to file a signed sheet.
-        abort_unless(auth()->user()?->isMerdekaJudge(), 403);
+        return MerdekaJudge::current() ?? abort(403);
+    }
+
+    public function logout(): void
+    {
+        session()->forget(MerdekaJudge::SESSION_KEY);
+
+        $this->redirectRoute('merdeka.login');
     }
 
     // ------------------------------------------------------------- navigation
@@ -86,6 +95,8 @@ class Judging extends Component
 
         // Bands are cast to int here so the stored JSON holds numbers, not the
         // strings the radios produced.
+        $judge = $this->judge();
+
         $scales = collect(MerdekaRubric::ids())
             ->mapWithKeys(fn (string $id) => [$id => (int) $this->scales[$id]])
             ->all();
@@ -100,7 +111,7 @@ class Judging extends Component
         }
 
         MerdekaScore::create([
-            'user_id' => auth()->id(),
+            'merdeka_judge_id' => $judge->id,
             'department_id' => $department->id,
             'scales' => $scales,
             'total' => MerdekaRubric::total($scales),
@@ -167,7 +178,8 @@ class Judging extends Component
     /** This judge's own filed sheets: department_id => total. Never anyone else's. */
     private function submittedTotals(): Collection
     {
-        return MerdekaScore::where('user_id', auth()->id())->pluck('total', 'department_id');
+        return MerdekaScore::where('merdeka_judge_id', $this->judge()->id)
+            ->pluck('total', 'department_id');
     }
 
     public function render()
@@ -190,10 +202,7 @@ class Judging extends Component
             // still the real check; this only avoids offering a dead button.
             'allBandsChosen' => collect(MerdekaRubric::ids())
                 ->every(fn (string $id) => filled($this->scales[$id] ?? null)),
-            // Queried rather than read off auth()->user(): Model::shouldBeStrict
-            // is on outside production, and the session user carries no
-            // eager-loaded relations.
-            'judge' => MerdekaJudge::where('user_id', auth()->id())->first(),
+            'judge' => $this->judge(),
         ]);
     }
 }

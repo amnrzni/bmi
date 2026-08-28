@@ -40,16 +40,6 @@
         {{ $slot }}
     </main>
 
-    <footer class="mt-10 flex justify-end">
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit"
-                    class="cursor-pointer font-cond text-[13px] tracking-wide text-merdeka-muted uppercase transition hover:text-merdeka-red-soft">
-                Log Keluar
-            </button>
-        </form>
-    </footer>
-
 </div>
 
 </body>

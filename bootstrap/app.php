@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureMerdekaJudge;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\RequireConsent;
 use Illuminate\Foundation\Application;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => EnsureUserIsAdmin::class,
             'consented' => RequireConsent::class,
+            'merdeka.judge' => EnsureMerdekaJudge::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
