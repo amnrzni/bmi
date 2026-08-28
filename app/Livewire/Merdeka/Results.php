@@ -30,7 +30,16 @@ class Results extends Component
     /** Set while reading one filed scoresheet in full. */
     public ?int $openScoreId = null;
 
-    public ?int $newJudgeUserId = null;
+    #[Validate('required|string|max:255')]
+    public string $newJudgeName = '';
+
+    /**
+     * The whole identity match. SSO compares what QCXIS returns against
+     * `users.email` and nothing else, so a typo here reads as "not on the
+     * roster" at sign-in, blaming the roster rather than the typo.
+     */
+    #[Validate('required|email|max:255')]
+    public string $newJudgeEmail = '';
 
     #[Validate('nullable|string|max:255')]
     public string $newJudgeTitle = '';
@@ -47,15 +56,38 @@ class Results extends Component
 
     public function addJudge(): void
     {
-        $this->validate(['newJudgeUserId' => 'required|integer|exists:users,id']);
-        $this->validateOnly('newJudgeTitle');
+        $this->validate();
 
-        $user = User::findOrFail($this->newJudgeUserId);
+        // Lowercased on write so it can never diverge from the comparison the
+        // SSO callback makes.
+        $email = mb_strtolower(trim($this->newJudgeEmail));
 
-        if (MerdekaJudge::where('user_id', $user->id)->exists()) {
-            $this->flash = $user->name.' sudah berada dalam panel.';
+        // withTrashed, because the unique index covers soft-deleted rows: a
+        // plain lookup would miss one and the insert would fail as a raw
+        // database error instead of a message.
+        $user = User::withTrashed()->whereRaw('lower(email) = ?', [$email])->first();
 
-            return;
+        if ($user) {
+            if (MerdekaJudge::where('user_id', $user->id)->exists()) {
+                $this->flash = $user->name.' sudah berada dalam panel.';
+
+                return;
+            }
+
+            // Deliberately keeps whatever the address already is. If it belongs
+            // to a competing staff member, seating them must not quietly strip
+            // them out of the challenge by flipping is_participant.
+            $user->restore();
+        } else {
+            // Judges are not roster members. is_participant = false keeps them
+            // off the roster screen, the teams, the standings and every
+            // weigh-in count — the row exists only because SSO has to match an
+            // email to a users row to sign anyone in at all.
+            $user = User::create([
+                'name' => trim($this->newJudgeName),
+                'email' => $email,
+                'is_participant' => false,
+            ]);
         }
 
         MerdekaJudge::create([
@@ -64,18 +96,37 @@ class Results extends Component
             'sort_order' => (int) MerdekaJudge::max('sort_order') + 1,
         ]);
 
-        $this->reset('newJudgeUserId', 'newJudgeTitle');
-        $this->flash = $user->name.' telah ditambah sebagai panel hakim.';
+        $this->reset('newJudgeName', 'newJudgeEmail', 'newJudgeTitle');
+        $this->flash = $user->name.' telah ditambah. Mereka boleh log masuk sebaik sahaja QCXIS memulangkan '.$email.' dengan tepat.';
     }
 
     public function removeJudge(int $judgeId): void
     {
         $judge = MerdekaJudge::with('user')->findOrFail($judgeId);
-        $name = $judge->user?->name ?? 'Hakim';
+        $user = $judge->user;
+        $name = $user?->name ?? 'Hakim';
 
         // Only the seat goes. Sheets they already filed stay — they were signed,
         // and the standing was computed with them.
         $judge->delete();
+
+        // An account that existed only to seat a judge goes with the seat.
+        // Left behind, a mistyped address is a working SSO login for whoever
+        // owns it. Everything else is spared: a roster member, an admin, anyone
+        // who has signed in, and anyone who has filed a sheet.
+        $wasOnlyEverAJudge = $user
+            && ! $user->is_participant
+            && ! $user->isAdmin()
+            && $user->hasNeverSignedIn()
+            && ! MerdekaScore::where('user_id', $user->id)->exists();
+
+        if ($wasOnlyEverAJudge) {
+            $user->delete();
+
+            $this->flash = $name.' telah dikeluarkan dari panel dan akaun log masuk mereka dipadam.';
+
+            return;
+        }
 
         $this->flash = $name.' telah dikeluarkan dari panel. Markah yang telah dihantar dikekalkan.';
     }
@@ -131,8 +182,6 @@ class Results extends Component
             'filedCount' => $scores->count(),
             'departmentsComplete' => $rows->filter(fn (array $row) => $judges->isNotEmpty() && $row['missing']->isEmpty())->count(),
             'departmentCount' => $departments->count(),
-            // Only people not already seated, so the picker can't offer a duplicate.
-            'candidates' => User::whereNotIn('id', $judges->pluck('user_id'))->orderBy('name')->get(),
             'openScore' => $this->openScoreId
                 ? $scores->firstWhere('id', $this->openScoreId)
                 : null,

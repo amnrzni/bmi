@@ -148,8 +148,10 @@
         <div class="{{ $panelClass }} mt-6 p-5">
             <h2 class="mb-1 font-display text-lg font-bold tracking-wide uppercase">Panel Hakim</h2>
             <p class="mb-4 font-cond text-[13px] leading-relaxed text-merdeka-muted">
-                Hanya nama dalam senarai ini boleh membuka borang markah. Mereka mesti sudah berada dalam
-                roster dengan e-mel QCXIS yang tepat — padanan log masuk dibuat pada e-mel sahaja.
+                Hanya nama dalam senarai ini boleh membuka borang markah. Hakim tidak perlu berada dalam
+                roster cabaran — masukkan e-mel QCXIS mereka di bawah dan akaun log masuk akan dibuka
+                untuk pertandingan ini sahaja. Padanan log masuk dibuat pada e-mel sahaja, jadi ejaan
+                mesti tepat.
             </p>
 
             @forelse ($judges as $judge)
@@ -171,29 +173,37 @@
                 <p class="mb-4 font-cond text-sm text-merdeka-muted">Belum ada hakim dilantik.</p>
             @endforelse
 
-            <div class="mt-4 grid gap-3 sm:grid-cols-[2fr_1fr_auto] sm:items-end">
+            @php
+                $judgeInputClass = 'w-full border border-merdeka-red/25 bg-merdeka-ink px-3 py-2.5 font-cond text-[15px] text-merdeka-cream outline-none focus:border-merdeka-red';
+            @endphp
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
-                    <label for="newJudgeUserId" class="{{ $labelClass }}">Tambah dari roster</label>
-                    <select id="newJudgeUserId" wire:model="newJudgeUserId"
-                            class="w-full border border-merdeka-red/25 bg-merdeka-ink px-3 py-2.5 font-cond text-[15px] text-merdeka-cream outline-none focus:border-merdeka-red">
-                        <option value="">— Pilih nama —</option>
-                        @foreach ($candidates as $candidate)
-                            <option value="{{ $candidate->id }}">{{ $candidate->name }} ({{ $candidate->email }})</option>
-                        @endforeach
-                    </select>
+                    <label for="newJudgeName" class="{{ $labelClass }}">Nama</label>
+                    <input id="newJudgeName" type="text" wire:model="newJudgeName" placeholder="Nama penuh"
+                           class="{{ $judgeInputClass }}">
+                    @error('newJudgeName') <p class="mt-1 font-cond text-sm text-merdeka-red-soft">Sila masukkan nama.</p> @enderror
                 </div>
                 <div>
-                    <label for="newJudgeTitle" class="{{ $labelClass }}">Gelaran</label>
+                    <label for="newJudgeTitle" class="{{ $labelClass }}">Gelaran (pilihan)</label>
                     <input id="newJudgeTitle" type="text" wire:model="newJudgeTitle" placeholder="Pengasas"
-                           class="w-full border border-merdeka-red/25 bg-merdeka-ink px-3 py-2.5 font-cond text-[15px] text-merdeka-cream outline-none focus:border-merdeka-red">
+                           class="{{ $judgeInputClass }}">
+                    @error('newJudgeTitle') <p class="mt-1 font-cond text-sm text-merdeka-red-soft">{{ $message }}</p> @enderror
                 </div>
-                <button type="button" wire:click="addJudge"
-                        class="cursor-pointer border border-transparent bg-merdeka-red px-5 py-2.5 font-display text-sm font-semibold tracking-wider text-white uppercase transition hover:bg-merdeka-red-soft">
-                    Tambah
-                </button>
             </div>
-            @error('newJudgeUserId') <p class="mt-2 font-cond text-sm text-merdeka-red-soft">Sila pilih nama dari roster.</p> @enderror
-            @error('newJudgeTitle') <p class="mt-2 font-cond text-sm text-merdeka-red-soft">{{ $message }}</p> @enderror
+
+            <div class="mt-3">
+                <label for="newJudgeEmail" class="{{ $labelClass }}">E-mel QCXIS</label>
+                <input id="newJudgeEmail" type="email" wire:model="newJudgeEmail" placeholder="nama@qcxis.com"
+                       autocapitalize="off" autocorrect="off" spellcheck="false"
+                       class="{{ $judgeInputClass }}">
+                @error('newJudgeEmail') <p class="mt-1 font-cond text-sm text-merdeka-red-soft">Sila masukkan e-mel yang sah.</p> @enderror
+            </div>
+
+            <button type="button" wire:click="addJudge"
+                    class="mt-4 cursor-pointer border border-transparent bg-merdeka-red px-5 py-2.5 font-display text-sm font-semibold tracking-wider text-white uppercase transition hover:bg-merdeka-red-soft">
+                Tambah Hakim
+            </button>
         </div>
     @endif
 </div>

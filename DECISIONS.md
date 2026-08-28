@@ -166,6 +166,13 @@ same identity — SSO, roster, admin — and nothing else.
   and a founder on the panel may or may not also be an admin.
 - **Scores hang off `users`, not `merdeka_judges`.** Removing someone from the panel must not delete
   sheets they already signed.
+- **Judges are seated by typing a name and email**, not picked from the roster — the founders judge the
+  contest without competing in the challenge. The seat opens a `users` row with `is_participant = false`,
+  because SSO can only match an email to a `users` row; that flag keeps them off the roster screen, the
+  teams, the standings and every weigh-in count. An address already on the roster is reused as-is, never
+  flipped to non-participant. Removing a seat deletes the login it opened, unless the person is a roster
+  member, an admin, has signed in, or has filed a sheet — a mistyped address left behind is a working
+  SSO login for whoever owns it.
 - **Locked on submit.** No edit path at all — the judge signs the sheet, so changing it afterwards
   would leave the signature attesting to something else. An admin has no override either.
 - **Malay UI, overriding §2's English rule for these screens only.** The rubric's band descriptions
@@ -187,7 +194,7 @@ same identity — SSO, roster, admin — and nothing else.
 2. **The Google Sheet's columns** — needed before a CSV importer can be written.
 3. **QCXIS SSO protocol and endpoints** — the driver is stubbed until these arrive.
 4. **Challenge end date** — open-ended in config; the grid grows as weeks are recorded.
-5. **Merdeka: the founders' QCXIS emails** — both need roster rows before they can be seated on the
-   panel; the login match is on email alone.
+5. **Merdeka: the founders' QCXIS emails** — typed straight into the panel form; the login match is on
+   email alone, so a typo reads as "not on the roster" at sign-in.
 6. **Merdeka: the placeholder departments** — Academic, Operations, Finance, IT Support and Customer
    Service still hold staff and will appear on the judging screen until they are cleared.

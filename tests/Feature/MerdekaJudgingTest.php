@@ -190,10 +190,13 @@ it('shows a judge their own totals and never another judge\'s', function () {
 
     Livewire::actingAs($this->founder)
         ->test(Judging::class)
+        // Asserted on the data rather than the rendered text: Livewire embeds a
+        // random checksum in the snapshot, so a bare assertDontSee('80') passes
+        // or fails depending on that hash.
+        ->assertViewHas('submitted', fn ($submitted) => $submitted->keys()->all() === [$this->marketing->id]
+            && (float) $submitted[$this->marketing->id] === 60.0)
         // Their own Marketing sheet is done; Resource Management is still open
-        // to them even though the other judge has filed one.
-        ->assertSee('60')
-        ->assertDontSee('80')
+        // to them even though the other judge has already filed one for it.
         ->assertSee('Beri Markah');
 });
 
@@ -216,17 +219,88 @@ it('averages every filed sheet for a department', function () {
         ->assertSee('2 / 4');
 });
 
-it('adds and removes a judge without touching their filed sheets', function () {
-    $co = User::factory()->create(['name' => 'Co-Founder']);
-
-    $component = Livewire::actingAs($this->admin)
+it('seats a judge from an email alone, off the roster', function () {
+    Livewire::actingAs($this->admin)
         ->test(Results::class)
-        ->set('newJudgeUserId', $co->id)
+        ->set('newJudgeName', 'Co-Founder')
+        ->set('newJudgeEmail', 'CoFounder@QCXIS.com')
         ->set('newJudgeTitle', 'Pengasas Bersama')
         ->call('addJudge')
         ->assertHasNoErrors();
 
-    expect(MerdekaJudge::where('user_id', $co->id)->exists())->toBeTrue();
+    $co = User::whereRaw('lower(email) = ?', ['cofounder@qcxis.com'])->sole();
+
+    // Lowercased on write, so it can't diverge from the SSO comparison.
+    expect($co->email)->toBe('cofounder@qcxis.com')
+        ->and($co->name)->toBe('Co-Founder')
+        // Not a roster member: the roster screen only lists participants.
+        ->and($co->is_participant)->toBeFalse()
+        ->and($co->isMerdekaJudge())->toBeTrue();
+});
+
+it('refuses an email that is already seated', function () {
+    Livewire::actingAs($this->admin)
+        ->test(Results::class)
+        ->set('newJudgeName', 'Founder Again')
+        ->set('newJudgeEmail', mb_strtoupper($this->founder->email))
+        ->call('addJudge')
+        ->assertSee('sudah berada dalam panel');
+
+    expect(MerdekaJudge::count())->toBe(1);
+});
+
+it('refuses a malformed email', function () {
+    Livewire::actingAs($this->admin)
+        ->test(Results::class)
+        ->set('newJudgeName', 'Someone')
+        ->set('newJudgeEmail', 'not-an-email')
+        ->call('addJudge')
+        ->assertHasErrors('newJudgeEmail');
+
+    expect(MerdekaJudge::count())->toBe(1);
+});
+
+// Seating an address that already competes must not strip them out of the
+// challenge by flipping is_participant.
+it('seats an existing roster member without changing their roster identity', function () {
+    $staff = User::factory()->create(['email' => 'ali@qcxis.com', 'is_participant' => true]);
+
+    Livewire::actingAs($this->admin)
+        ->test(Results::class)
+        ->set('newJudgeName', 'Ali Typed Differently')
+        ->set('newJudgeEmail', 'ali@qcxis.com')
+        ->call('addJudge')
+        ->assertHasNoErrors();
+
+    expect(User::whereRaw('lower(email) = ?', ['ali@qcxis.com'])->count())->toBe(1)
+        ->and($staff->fresh()->is_participant)->toBeTrue()
+        ->and($staff->fresh()->name)->toBe($staff->name);
+});
+
+it('deletes the login it opened when that seat is removed', function () {
+    $component = Livewire::actingAs($this->admin)
+        ->test(Results::class)
+        ->set('newJudgeName', 'Typo')
+        ->set('newJudgeEmail', 'tpyo@qcxis.com')
+        ->call('addJudge');
+
+    $typo = User::whereRaw('lower(email) = ?', ['tpyo@qcxis.com'])->sole();
+
+    $component->call('removeJudge', MerdekaJudge::where('user_id', $typo->id)->value('id'));
+
+    // Otherwise a mistyped address stays a working SSO login for whoever owns it.
+    expect(User::whereRaw('lower(email) = ?', ['tpyo@qcxis.com'])->exists())->toBeFalse()
+        ->and(MerdekaJudge::where('user_id', $typo->id)->exists())->toBeFalse();
+});
+
+it('keeps the account of a removed judge who filed a sheet', function () {
+    $component = Livewire::actingAs($this->admin)
+        ->test(Results::class)
+        ->set('newJudgeName', 'Co-Founder')
+        ->set('newJudgeEmail', 'co@qcxis.com')
+        ->call('addJudge');
+
+    $co = User::whereRaw('lower(email) = ?', ['co@qcxis.com'])->sole();
 
     MerdekaScore::create([
         'user_id' => $co->id, 'department_id' => $this->rm->id,
@@ -235,8 +309,24 @@ it('adds and removes a judge without touching their filed sheets', function () {
 
     $component->call('removeJudge', MerdekaJudge::where('user_id', $co->id)->value('id'));
 
-    expect(MerdekaJudge::where('user_id', $co->id)->exists())->toBeFalse()
+    expect(User::whereRaw('lower(email) = ?', ['co@qcxis.com'])->exists())->toBeTrue()
+        ->and(MerdekaJudge::where('user_id', $co->id)->exists())->toBeFalse()
         ->and(MerdekaScore::count())->toBe(1);
+});
+
+it('keeps the account of a removed judge who is on the roster', function () {
+    $staff = User::factory()->create(['email' => 'ali@qcxis.com', 'is_participant' => true]);
+
+    $component = Livewire::actingAs($this->admin)
+        ->test(Results::class)
+        ->set('newJudgeName', 'Ali')
+        ->set('newJudgeEmail', 'ali@qcxis.com')
+        ->call('addJudge');
+
+    $component->call('removeJudge', MerdekaJudge::where('user_id', $staff->id)->value('id'));
+
+    expect($staff->fresh())->not->toBeNull()
+        ->and($staff->fresh()->is_participant)->toBeTrue();
 });
 
 it('keeps an off-panel judge\'s sheet in the average', function () {
@@ -251,6 +341,21 @@ it('keeps an off-panel judge\'s sheet in the average', function () {
         ->test(Results::class)
         ->assertSee('100')
         ->assertSee('bukan lagi ahli panel');
+});
+
+// SSO drops everyone on the home page after sign-in, so a judge who is not a
+// challenge participant has to survive that landing.
+it('lands a non-participant judge on a working home page', function () {
+    Livewire::actingAs($this->admin)
+        ->test(Results::class)
+        ->set('newJudgeName', 'Co-Founder')
+        ->set('newJudgeEmail', 'co@qcxis.com')
+        ->call('addJudge');
+
+    $co = User::whereRaw('lower(email) = ?', ['co@qcxis.com'])->sole();
+
+    $this->actingAs($co)->get('/')->assertOk();
+    $this->actingAs($co)->get(route('merdeka.judging'))->assertOk();
 });
 
 // ----------------------------------------------------------------- the rubric
