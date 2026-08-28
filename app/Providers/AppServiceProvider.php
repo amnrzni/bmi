@@ -59,5 +59,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-analytics', fn (User $user) => false);
 
         Gate::define('manage-roster', fn (User $user) => false);
+
+        // Merdeka contest results: the full cross-judge matrix, averages and
+        // ranking. Admin-only, via the Gate::before above.
+        Gate::define('view-merdeka-results', fn (User $user) => false);
+
+        // Deliberately NOT a gate: `Gate::before` hands admins every ability,
+        // and an admin who isn't on the panel must not be able to file a
+        // signed scoresheet. The judging screen checks isMerdekaJudge() itself.
     }
 }

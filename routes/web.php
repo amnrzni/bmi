@@ -6,6 +6,8 @@ use App\Http\Controllers\ConsentController;
 use App\Livewire\Analytics;
 use App\Livewire\Events;
 use App\Livewire\Home;
+use App\Livewire\Merdeka\Judging;
+use App\Livewire\Merdeka\Results;
 use App\Livewire\MyProgress;
 use App\Livewire\Roster;
 use App\Livewire\RosterImport;
@@ -34,6 +36,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/consent', [ConsentController::class, 'show'])->name('consent.show');
     Route::post('/consent', [ConsentController::class, 'store'])->name('consent.store');
     Route::post('/withdraw', [ConsentController::class, 'withdraw'])->name('consent.withdraw');
+
+    // --------------------------------------------- Merdeka corner contest
+    // Outside the `consented` group on purpose: judging a decoration contest
+    // has nothing to do with consenting to share body weight, so a founder on
+    // the panel shouldn't meet that gate on the way to a scoresheet.
+    //
+    // Unlisted in the nav — reached by direct link. Judging checks panel
+    // membership, results checks admin; both do it in the component.
+    Route::prefix('merdeka')->group(function () {
+        Route::get('/', Judging::class)->name('merdeka.judging');
+        Route::get('/keputusan', Results::class)->name('merdeka.results');
+    });
 
     Route::middleware('consented')->group(function () {
         Route::get('/', Home::class)->name('home');

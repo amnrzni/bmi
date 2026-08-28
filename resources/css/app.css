@@ -33,12 +33,37 @@
     --color-blood: #b11226; /* danger; primary button */
     --color-blood-bright: #d21b30; /* "up" / weight gained */
 
+    /*
+     | Merdeka corner contest — a second palette, used only by the judging
+     | screens under /merdeka and their own layout. Prefixed so it can never be
+     | reached by accident from a challenge screen, and so deleting the contest
+     | later is one block plus one directory.
+     |
+     | Values are the prototype's, which read as flag red on near-black rather
+     | than the challenge's gold on ink.
+     */
+    --color-merdeka-ink: #0b0708;
+    --color-merdeka-ink-2: #1a0f11;
+    --color-merdeka-ink-3: #241316;
+    --color-merdeka-ink-4: #3a1519;
+    --color-merdeka-red: #d6273f;
+    --color-merdeka-red-soft: #f0495f;
+    --color-merdeka-blood: #7a0f1e;
+    --color-merdeka-cream: #f5ede7;
+    --color-merdeka-muted: #a08a8d;
+    --color-merdeka-good: #4c9a6a;
+
     --font-display: 'Oswald', ui-sans-serif, system-ui, sans-serif;
     --font-cond: 'Barlow Condensed', ui-sans-serif, system-ui, sans-serif;
     --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
+    /* Alpine hasn't booted yet; without this, x-cloak elements flash first. */
+    [x-cloak] {
+        display: none !important;
+    }
+
     body {
         background-color: var(--color-ink);
         color: var(--color-bone);

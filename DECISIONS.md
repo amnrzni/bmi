@@ -157,6 +157,29 @@ showing no personal rank.
 - **Team names:** TAH and BKN, equal visual weight everywhere.
 - **Admins are participants** — they weigh in and compete like everyone else.
 
+## 12. Merdeka corner contest (a separate feature sharing the app)
+
+Judged decoration contest for the 2026 Merdeka corners. It lives in the same app because it needs the
+same identity — SSO, roster, admin — and nothing else.
+
+- **Judging panel is its own table** (`merdeka_judges`), not a `Role` case. `role` is single-valued,
+  and a founder on the panel may or may not also be an admin.
+- **Scores hang off `users`, not `merdeka_judges`.** Removing someone from the panel must not delete
+  sheets they already signed.
+- **Locked on submit.** No edit path at all — the judge signs the sheet, so changing it afterwards
+  would leave the signature attesting to something else. An admin has no override either.
+- **Malay UI, overriding §2's English rule for these screens only.** The rubric's band descriptions
+  are the substance of the contest, and translating them is where a rubric loses its precision.
+- **Its own palette** (`--color-merdeka-*`), flag red on near-black, scoped to `/merdeka`.
+- **Total is computed server-side** from the 1–5 bands on every write, same rule as BMI (§4).
+- **Entrants are `departments` rows**, so the contest needs the real org departments —
+  `php artisan merdeka:departments` adds them and reports the placeholders.
+- **Unlisted in the nav.** Judges reach `/merdeka` by link; admins reach `/merdeka/keputusan`.
+  A one-week event doesn't earn a permanent tab for 38 people.
+- **Admins see partial results live**; judges see only their own sheets, so neither founder can
+  anchor on the other's marks.
+- **Outside the consent gate** — judging a decoration has nothing to do with sharing body weight.
+
 ## Still open
 
 1. **The real roster** — names, departments, heights, team assignments. Placeholder data seeded
@@ -164,3 +187,7 @@ showing no personal rank.
 2. **The Google Sheet's columns** — needed before a CSV importer can be written.
 3. **QCXIS SSO protocol and endpoints** — the driver is stubbed until these arrive.
 4. **Challenge end date** — open-ended in config; the grid grows as weeks are recorded.
+5. **Merdeka: the founders' QCXIS emails** — both need roster rows before they can be seated on the
+   panel; the login match is on email alone.
+6. **Merdeka: the placeholder departments** — Academic, Operations, Finance, IT Support and Customer
+   Service still hold staff and will appear on the judging screen until they are cleared.
