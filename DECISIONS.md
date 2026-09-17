@@ -187,6 +187,39 @@ Judged decoration contest for the 2026 Merdeka corners. It shares the deployment
 - **Admins see partial results live**; judges see only their own sheets, so neither founder can
   anchor on the other's marks.
 
+## 13. Tournaments (sports days, starting with Kudeta Bola Baling)
+
+Built from the organisers' single-file prototype for Kudeta Bola Baling, Sat 19 Sep 2026. More
+tournaments are expected, so it is a list of tournaments rather than one hardcoded event.
+
+- **Watching needs no sign-in.** `/tournaments` and `/tournaments/{slug}` are public, so anyone at
+  the venue can follow from a shared link. **Squad names and "not attending" are therefore public** —
+  accepted by the organisers. Signed-in staff also get a nav tab.
+- **Players are roster members.** Squads are picked from `users`, one squad per person per
+  tournament. The division (men/women) lives on the squad row, never on the user — §3's "no gender"
+  still holds for the challenge itself.
+- **Existing app admins run it.** Scores, finals, captains and attendance are entered on the public
+  page, where every action re-checks `manage-tournaments`. Teams, squads, fixtures and the programme
+  are on a separate admin-only setup screen, because the public page polls every 15s for viewers and
+  a refresh landing mid-edit would lose the edit. Admin views don't poll.
+- **Format:** a round-robin group whose pairings are shared by both divisions, each division scored
+  separately, then a final per division between that division's top two. **Win 3, draw 1, loss 0;**
+  level on points → score difference → scored → team list order. No head-to-head.
+- **A level final is decided on penalties**, entered as a second score. A level shoot-out is refused.
+- **Finalists lock when the final is first saved.** Correcting a group score afterwards doesn't move
+  them; the page warns the admin, and clearing the final re-seeds it from the table.
+- **The combined table is information only** — both divisions' group lines summed, no champion.
+- **Everything stays editable**, scored matches included; people mistype at a courtside table.
+  Changing a scored fixture's teams keeps the score on that match number. Every score and final
+  write is stamped with who made it and goes to the activity log.
+- **The slug is set once.** Renaming a tournament doesn't break a link already shared.
+- **Not carried over from the prototype:** the match timer (the organisers use the phone's clock
+  app) and the Excel template import. Export is CSV, as for events.
+- **`php artisan tournaments:kudeta`** creates Kudeta's teams, fixtures and programme, and places
+  squad names onto the roster only where a name matches exactly one roster member on whole words
+  and that member matches no other name. Everything else is listed for an admin to add by hand.
+  Re-runnable once the roster is filled in. Use `--dry-run` first.
+
 ## Still open
 
 1. **The real roster** — names, departments, heights, team assignments. Placeholder data seeded

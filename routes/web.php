@@ -12,6 +12,9 @@ use App\Livewire\Merdeka\Results;
 use App\Livewire\MyProgress;
 use App\Livewire\Roster;
 use App\Livewire\RosterImport;
+use App\Livewire\Tournaments\Index as TournamentIndex;
+use App\Livewire\Tournaments\Setup as TournamentSetup;
+use App\Livewire\Tournaments\Show as TournamentShow;
 use App\Livewire\WeighInSession;
 use Illuminate\Support\Facades\Route;
 
@@ -57,9 +60,22 @@ Route::middleware('auth')->group(function () {
             Route::get('/roster', Roster::class)->name('roster');
             Route::get('/roster/import', RosterImport::class)->name('roster.import');
             Route::get('/analytics', Analytics::class)->name('analytics');
+
+            Route::get('/tournaments/{tournament}/setup', TournamentSetup::class)->name('tournaments.setup');
         });
     });
 });
+
+// ------------------------------------------------------------ tournaments
+
+/*
+ | Watching needs no sign-in: players, family and anyone else at the venue
+ | follow the scores from a shared link. Admin controls live on the same page
+ | and are gated inside the component, like events; setup is above, behind
+ | the admin middleware.
+ */
+Route::get('/tournaments', TournamentIndex::class)->name('tournaments.index');
+Route::get('/tournaments/{tournament}', TournamentShow::class)->name('tournaments.show');
 
 // ------------------------------------------------- Merdeka corner contest
 

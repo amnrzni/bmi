@@ -64,6 +64,10 @@ class AppServiceProvider extends ServiceProvider
         // ranking. Admin-only, via the Gate::before above.
         Gate::define('view-merdeka-results', fn (User $user) => false);
 
+        // Tournament setup, scores, captains and attendance. Watching needs no
+        // ability at all — the tournament pages are public.
+        Gate::define('manage-tournaments', fn (User $user) => false);
+
         // There is deliberately no ability for judging itself: judges are not
         // app users at all. They sign in with an email at /merdeka and are held
         // by the `merdeka.judge` middleware, so no Gate could apply to them.

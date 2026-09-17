@@ -32,6 +32,7 @@
                     ['route' => 'home', 'label' => 'Home', 'show' => true],
                     ['route' => 'me', 'label' => 'My Progress', 'show' => auth()->user()->is_participant],
                     ['route' => 'events', 'label' => 'Events', 'show' => true],
+                    ['route' => 'tournaments.index', 'label' => 'Tournaments', 'show' => true, 'active' => 'tournaments.*'],
                     ['route' => 'weigh-in', 'label' => 'Weigh-In', 'show' => auth()->user()->isAdmin()],
                     ['route' => 'roster', 'label' => 'Roster', 'show' => auth()->user()->isAdmin()],
                     ['route' => 'analytics', 'label' => 'Analytics', 'show' => auth()->user()->isAdmin()],
@@ -39,11 +40,12 @@
             @endphp
 
             @foreach (collect($tabs)->where('show') as $tab)
+                @php $active = request()->routeIs($tab['active'] ?? $tab['route']); @endphp
                 <a href="{{ route($tab['route']) }}"
                    @class([
                        'rounded-sm border px-4 py-2 font-cond text-[13px] font-semibold tracking-wide-cond uppercase transition',
-                       'border-gold bg-gold text-ink' => request()->routeIs($tab['route']),
-                       'border-transparent text-bone-dim hover:text-bone' => ! request()->routeIs($tab['route']),
+                       'border-gold bg-gold text-ink' => $active,
+                       'border-transparent text-bone-dim hover:text-bone' => ! $active,
                    ])>{{ $tab['label'] }}</a>
             @endforeach
 

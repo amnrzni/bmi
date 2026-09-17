@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Tournament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +45,36 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * A tournament with named teams (in list order) and group fixtures between
+ * them — every pairing once, unless pairs are given.
+ *
+ * @param  list<string>  $teams
+ * @param  list<array{0: string, 1: string}>|null  $pairs
+ */
+function tournamentWith(array $teams = ['Alpha', 'Bravo', 'Charlie'], ?array $pairs = null): Tournament
 {
-    // ..
+    $tournament = Tournament::create(['name' => 'Test Cup', 'slug' => Tournament::slugFor('Test Cup')]);
+
+    $made = collect($teams)
+        ->mapWithKeys(fn (string $name, int $i) => [$name => $tournament->teams()->create(['name' => $name, 'sort_order' => $i + 1])]);
+
+    if ($pairs === null) {
+        $pairs = [];
+        foreach ($teams as $i => $home) {
+            foreach (array_slice($teams, $i + 1) as $away) {
+                $pairs[] = [$home, $away];
+            }
+        }
+    }
+
+    foreach ($pairs as $i => [$home, $away]) {
+        $tournament->fixtures()->create([
+            'number' => $i + 1,
+            'home_team_id' => $made[$home]->id,
+            'away_team_id' => $made[$away]->id,
+        ]);
+    }
+
+    return $tournament;
 }
